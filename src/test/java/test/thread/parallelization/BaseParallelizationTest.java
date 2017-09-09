@@ -798,7 +798,7 @@ public class BaseParallelizationTest extends SimpleBaseTest {
     }
 
     private static boolean allExecutingMethodsHaveMoreInvocations(Map<String, EventLog> methodsExecuting,
-        Map<String, Integer> methodInvocationsCounts, Map<String, Integer> expectedInvocationCounts) {
+                                                                  Map<String, Integer> methodInvocationsCounts, Map<String, Integer> expectedInvocationCounts) {
 
         for(String methodAndClassName : methodsExecuting.keySet()) {
             if(Objects.equals(methodInvocationsCounts.get(methodAndClassName),
