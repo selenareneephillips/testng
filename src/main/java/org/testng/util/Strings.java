@@ -1,32 +1,36 @@
 package org.testng.util;
 
-import org.testng.collections.Lists;
 import org.testng.collections.Maps;
 
-import java.util.List;
 import java.util.Map;
 
-public class Strings {
+public final class Strings {
+  private Strings() {
+    //Utility class. Defeat instantiation.
+  }
   public static boolean isNullOrEmpty(String string) {
-    return string == null || string.trim().length() == 0; // string.isEmpty() in Java 6
+    return string == null || string.trim().isEmpty();
   }
 
   public static boolean isNotNullAndNotEmpty(String string) {
     return ! (isNullOrEmpty(string));
   }
 
-  private static List<String> ESCAPE_HTML_LIST = Lists.newArrayList(
-    "&", "&amp;",
-    "<", "&lt;",
-    ">", "&gt;"
-  );
-  
+  /**
+   * @param string - The input String.
+   * @return - Returns an empty string if the input String is <code>null</code> (or) empty, else it returns
+   * back the input string.
+   */
+  public static String getValueOrEmpty(String string) {
+    return isNotNullAndNotEmpty(string) ? string : "";
+  }
+
   private static final Map<String, String> ESCAPE_HTML_MAP = Maps.newLinkedHashMap();
 
   static {
-    for (int i = 0; i < ESCAPE_HTML_LIST.size(); i += 2) {
-      ESCAPE_HTML_MAP.put(ESCAPE_HTML_LIST.get(i), ESCAPE_HTML_LIST.get(i + 1));
-    }
+    ESCAPE_HTML_MAP.put("&", "&amp;");
+    ESCAPE_HTML_MAP.put("<", "&lt;");
+    ESCAPE_HTML_MAP.put(">", "&gt;");
   }
 
   public static String escapeHtml(String text) {
@@ -37,7 +41,23 @@ public class Strings {
     return result;
   }
 
-  public static void main(String[] args) {
-    System.out.println(escapeHtml("10 < 20 && 30 > 20"));
+  public static String valueOf(Map<?, ?> m) {
+    StringBuilder result = new StringBuilder();
+    for (Object o : m.values()) {
+      result.append(o).append(" ");
+    }
+
+    return result.toString();
+  }
+
+  public static String join(String delimiter, String[] parts) {
+    StringBuilder sb = new StringBuilder();
+    for (int i = 0; i < parts.length - 1; i++) {
+      sb.append(parts[i]).append(delimiter);
+    }
+    if (parts.length > 1) {
+      sb.append(parts[parts.length - 1]);
+    }
+    return sb.toString();
   }
 }

@@ -5,12 +5,14 @@ import org.testng.ITestNGListener;
 import org.testng.ITestNGMethod;
 import org.testng.ITestResult;
 import org.testng.TestNG;
+import org.testng.TestNGException;
 import org.testng.annotations.ITestAnnotation;
 import org.testng.collections.Lists;
 import org.testng.internal.annotations.AnnotationHelper;
 import org.testng.internal.annotations.DefaultAnnotationTransformer;
 import org.testng.internal.annotations.IAnnotationFinder;
 import org.testng.internal.annotations.JDK15AnnotationFinder;
+import org.testng.xml.Parser;
 import org.testng.xml.XmlClass;
 import org.testng.xml.XmlGroups;
 import org.testng.xml.XmlInclude;
@@ -23,6 +25,7 @@ import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
+import java.io.Reader;
 import java.nio.file.FileVisitResult;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -114,8 +117,16 @@ public class SimpleBaseTest {
       return create(suite);
     }
     return create(outDir, suite);
+  }
 
-
+  protected static XmlSuite createDummySuiteWithTestNamesAs(String... tests) {
+    XmlSuite suite = new XmlSuite();
+    suite.setName("random_suite");
+    for (String test : tests) {
+      XmlTest xmlTest = new XmlTest(suite);
+      xmlTest.setName(test);
+    }
+    return suite;
   }
 
   protected static XmlSuite createXmlSuite(String name) {
@@ -162,6 +173,20 @@ public class SimpleBaseTest {
     result.setPackages(xmlPackages);
 
     return result;
+  }
+
+  protected static XmlTest createXmlTest(String suiteName, String testName) {
+    XmlSuite suite = createXmlSuite(suiteName);
+    return createXmlTest(suite, testName);
+  }
+
+  protected static XmlTest createXmlTest(String suiteName, String testName, Class<?>... classes) {
+    XmlSuite suite = createXmlSuite(suiteName);
+    XmlTest xmlTest = createXmlTest(suite, testName);
+    for(Class<?> clazz: classes) {
+      xmlTest.getXmlClasses().add(new XmlClass(clazz));
+    }
+    return xmlTest;
   }
 
   protected static XmlTest createXmlTest(XmlSuite suite, String name) {
@@ -266,7 +291,7 @@ public class SimpleBaseTest {
   }
 
   public static String getPathToResource(String fileName) {
-    String result = System.getProperty(TEST_RESOURCES_DIR);
+    String result = System.getProperty(TEST_RESOURCES_DIR, "src/test/resources");
     if (result == null) {
       throw new IllegalArgumentException("System property " + TEST_RESOURCES_DIR + " was not defined.");
     }
@@ -345,7 +370,17 @@ public class SimpleBaseTest {
    */
   protected static List<Integer> grep(File fileName, String regexp, List<String> resultLines) {
     List<Integer> resultLineNumbers = new ArrayList<>();
-    try (BufferedReader fr = new BufferedReader(new FileReader(fileName))) {
+    try(Reader reader = new FileReader(fileName)) {
+      resultLineNumbers =  grep(reader, regexp, resultLines);
+    } catch (IOException e) {
+      e.printStackTrace();
+    }
+    return resultLineNumbers;
+  }
+
+  protected  static List<Integer> grep(Reader reader, String regexp, List<String> resultLines) {
+    List<Integer> resultLineNumbers = new ArrayList<>();
+    try (BufferedReader fr = new BufferedReader(reader)) {
       String line;
       int currentLine = 0;
       Pattern p = Pattern.compile(".*" + regexp + ".*");
@@ -356,12 +391,22 @@ public class SimpleBaseTest {
         }
         currentLine++;
       }
-
     } catch (IOException e) {
       e.printStackTrace();
     }
     return resultLineNumbers;
-
+  }
+  
+  protected static List<XmlSuite> getSuites(String... suiteFiles){
+    List<XmlSuite> suites = new ArrayList<>();
+    for (String suiteFile : suiteFiles) {
+        try {
+          suites.addAll(new Parser(suiteFile).parseToList());
+      } catch (IOException e) {
+          throw new TestNGException(e);
+      }
+    }
+    return suites;
   }
 
 }

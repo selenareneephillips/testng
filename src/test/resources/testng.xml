@@ -78,7 +78,11 @@
       <class name="test.MethodTest" />
       <class name="test.sample.AfterClassCalledAtEnd"/>
       <class name="test.GraphTest"/>
-      <class name="test.DynamicGraphTest"/>
+      <class name="org.testng.internal.DynamicGraphTest"/>
+      <class name="org.testng.internal.ParameterHandlerTest"/>
+      <class name="org.testng.internal.TestListenerHelperTest"/>
+      <class name="org.testng.internal.GroupsHelperTest"/>
+      <class name="org.testng.internal.DynamicGraphHelperTest"/>
       <class name="test.ReflectionHelperTest"/>
       <class name="test.privatemethod.PrivateMethodTest$PrivateMethodInnerTest"/>
       <class name="test.multiple.TestMultiple"/>
@@ -104,11 +108,13 @@
 -->
       <class name="test.simple.IncludedExcludedTest" />
       <class name="test.reports.ReportTest" />
+      <class name="test.reports.XmlReporterTest"/>
       <class name="test.annotationtransformer.AnnotationTransformerTest" />
 <!--
       <class name="test.jar.JarTest" />
  -->
       <class name="test.xml.XmlVerifyTest" />
+      <class name="test.xml.XMLStringBufferTest"/>
       <class name="test.invokedmethodlistener.InvokedMethodListenerTest" />
       <class name="test.testng249.VerifyTest"/>
       <class name="test.testng195.AfterMethodTest" />
@@ -141,6 +147,8 @@
       <class name="test.groupbug.GroupBugTest" />
       <class name="test.parameters.ShadowTest" />
       <class name="test.parameters.ParameterOverrideTest" />
+      <class name="test.parameters.ParameterInjectAndOptionTest" />
+      <class name="test.parameters.ParametersPackageLevelMethodTest" />
       <class name="test.reports.FailedReporterTest" />
       <class name="test.reports.EmailableReporterTest"/>
       <class name="test.failedreporter.FailedReporterScenariosTest"/>
@@ -191,10 +199,12 @@
       <class name="test.listeners.SuiteAndConfigurationListenerTest" />
       <class name="test.listeners.ListenerInXmlTest" />
       <class name="test.listeners.ExecutionListenerTest" />
+      <class name="test.listeners.ExecutionListenerAndSuiteListenerTest" />
       <class name="test.listeners.ConfigurationListenerTest" />
       <class name="test.multiplelisteners.TestMaker" />
       <class name="test.listeners.github1130.GitHub1130Test"/>
       <class name="test.listeners.github1296.GitHub1296Test"/>
+      <class name="test.listeners.github1465.IssueTest"/>
     </classes>
   </test>
 
@@ -214,6 +224,7 @@
       <class name="test.inject.NoInjectionTest" />
       <class name="test.inject.NativeInjectionTest" />
       <class name="test.inject.Github1298Test"/>
+      <class name="test.inject.Github1649Test"/>
     </classes>
   </test>
 
@@ -269,6 +280,7 @@
       <class name="test.dependent.GroupByInstancesTest" />
       <class name="test.dependent.xml.GroupDependencyTest" />
       <class name="test.dependent.DependencyFixTest"/>
+      <class name="test.dependent.issue1648.TestRunner"/>
     </classes>
   </test>
 
@@ -369,6 +381,7 @@
       <class name="test.factory.classconf.XClassOrderWithFactoryTest" />
       <class name="test.factory.FactoryInterleavingTest"/>
       <class name="test.factory.FactoryDataProviderTest"/>
+      <class name="test.factory.github1631.GitHub1631Tests"/>
 
       <class name="test.factory.DisabledFactoryTest"/>
       <class name="test.factory.FactoryAndTestMethodTest" />
@@ -617,6 +630,7 @@
       <class name="test.JUnitTest1" />
       <class name="test.CommandLineTest"/>
       <class name="test.JUnit4Test" />
+      <class name="test.junit4.listeners.Issue323TestRunner"/>
       <class name="test.groovy.GroovyTest" />
     </classes>
   </test>
@@ -742,6 +756,9 @@
     <classes>
       <class name="org.testng.xml.SuiteXmlParserTest" />
       <class name="org.testng.xml.XmlSuiteTest"/>
+      <class name="org.testng.xml.internal.XmlSuiteUtilsTest"/>
+      <class name="org.testng.xml.XmlTestTest"/>
+      <class name="org.testng.xml.ParserTest"/>
     </classes>
   </test>
 
@@ -749,6 +766,12 @@
     <classes>
       <class name="test.sanitycheck.CheckTestNamesTest" />
       <class name="test.sanitycheck.CheckSuiteNamesTest" />
+    </classes>
+  </test>
+  
+  <test name="TestNames">
+    <classes>
+      <class name="org.testng.xml.internal.TestNamesMatcherTest"/>
     </classes>
   </test>
 
@@ -768,6 +791,7 @@
       <class name="test.configuration.VerifySuiteTest" />
       <class name="test.configuration.SingleConfigurationTest" />
       <class name="test.configuration.BeforeClassWithDisabledTest" />
+      <class name="test.configuration.github1625.TestRunnerIssue1625"/>
     </classes>
   </test>
 
@@ -798,6 +822,7 @@
   <test name="@Test(enable)">
     <classes>
       <class name="test.enable.EnableTest"/>
+      <class name="test.ignore.IgnoreTest"/>
     </classes>
   </test>
 
@@ -827,11 +852,29 @@
     </classes>
   </test>
 
+  <test name="Suite_Related_Tests">
+    <classes>
+      <class name="test.suites.github1533.Github1533Test"/>
+    </classes>
+  </test>
+
+  <test name="Jar_Related_tests">
+    <classes>
+      <class name="org.testng.JarFileUtilsTest"/>
+    </classes>
+  </test>
+
   <!--This test depends on System properties. So its intentionally being run at the end
   because the toggling of the system property will affect other tests -->
   <test name = "RunAtLast">
     <classes>
       <class name="test.dataprovider.issue128.DataProviderParametersMismatchTest"/>
+    </classes>
+  </test>
+
+  <test name = "dryRun">
+    <classes>
+      <class name="org.testng.DryRunTest"/>
     </classes>
   </test>
 

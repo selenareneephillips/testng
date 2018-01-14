@@ -3,24 +3,17 @@ package org.testng;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.io.InputStream;
 import java.net.URLClassLoader;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.Enumeration;
 import java.util.List;
 import java.util.Map;
 import java.util.ServiceLoader;
 import java.util.Set;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
-import java.util.jar.JarEntry;
-import java.util.jar.JarFile;
 
 import org.testng.annotations.ITestAnnotation;
 import org.testng.collections.Lists;
@@ -29,6 +22,7 @@ import org.testng.collections.Sets;
 import org.testng.internal.ClassHelper;
 import org.testng.internal.Configuration;
 import org.testng.internal.DynamicGraph;
+import org.testng.internal.ExitCode;
 import org.testng.internal.IConfiguration;
 import org.testng.internal.IResultListener2;
 import org.testng.internal.OverrideProcessor;
@@ -52,6 +46,7 @@ import org.testng.reporters.SuiteHTMLReporter;
 import org.testng.reporters.VerboseReporter;
 import org.testng.reporters.XMLReporter;
 import org.testng.reporters.jq.Main;
+import org.testng.xml.IPostProcessor;
 import org.testng.xml.Parser;
 import org.testng.xml.XmlClass;
 import org.testng.xml.XmlInclude;
@@ -61,6 +56,9 @@ import org.testng.xml.XmlTest;
 
 import com.beust.jcommander.JCommander;
 import com.beust.jcommander.ParameterException;
+
+import org.testng.xml.internal.TestNamesMatcher;
+import org.testng.xml.internal.XmlSuiteUtils;
 
 import static org.testng.internal.Utils.defaultIfStringEmpty;
 import static org.testng.internal.Utils.isStringEmpty;
@@ -142,15 +140,8 @@ public class TestNG {
   private final Map<Class<? extends IReporter>, IReporter> m_reporters = Maps.newHashMap();
   private final Map<Class<? extends IDataProviderListener>, IDataProviderListener> m_dataProviderListeners = Maps.newHashMap();
 
-  protected static final int HAS_FAILURE = 1;
-  protected static final int HAS_SKIPPED = 2;
-  protected static final int HAS_FSP = 4;
-  protected static final int HAS_NO_TEST = 8;
 
   public static final Integer DEFAULT_VERBOSE = 1;
-
-  private int m_status;
-  private boolean m_hasTests= false;
 
   // Command line suite parameters
   private int m_threadCount = -1;
@@ -185,6 +176,9 @@ public class TestNG {
   private final Map<Class<? extends IAlterSuiteListener>, IAlterSuiteListener> m_alterSuiteListeners= Maps.newHashMap();
 
   private boolean m_isInitialized = false;
+  private boolean isSuiteInitialized = false;
+  private org.testng.internal.ExitCodeListener exitCodeListener;
+  private ExitCode exitCode;
 
   /**
    * Default constructor. Setting also usage of default listeners/reporters.
@@ -211,11 +205,10 @@ public class TestNG {
   }
 
   public int getStatus() {
-    return m_status;
-  }
-
-  private void setStatus(int status) {
-    m_status |= status;
+    if (!exitCodeListener.hasTests()) {
+      return ExitCode.HAS_NO_TEST;
+    }
+    return exitCode.getExitCode();
   }
 
   /**
@@ -262,18 +255,18 @@ public class TestNG {
   }
 
   private void parseSuiteFiles() {
+    IPostProcessor processor = getProcessor();
     for (XmlSuite s : m_suites) {
+      if (s.isParsed()) {
+        continue;
+      }
       for (String suiteFile : s.getSuiteFiles()) {
         try {
-          Collection<XmlSuite> childSuites;
-          if (s.getFileName() != null) {
-            Path rootPath = Paths.get(s.getFileName()).getParent();
-            try (InputStream is = Files.newInputStream(rootPath.resolve(suiteFile))) {
-              childSuites = getParser(is).parse();
-            }
-          } else {
-            childSuites = getParser(suiteFile).parse();
+          String fileNameToUse = s.getFileName();
+          if (fileNameToUse == null || fileNameToUse.trim().isEmpty()) {
+            fileNameToUse = suiteFile;
           }
+          Collection<XmlSuite> childSuites = Parser.parse(fileNameToUse, processor);
           for (XmlSuite cSuite : childSuites) {
             cSuite.setParentSuite(s);
             s.getChildSuites().add(cSuite);
@@ -287,20 +280,35 @@ public class TestNG {
 
   }
 
+  private OverrideProcessor getProcessor() {
+    return new OverrideProcessor(m_includedGroups, m_excludedGroups);
+  }
+
   private void parseSuite(String suitePath) {
     if (LOGGER.isDebugEnabled()) {
       LOGGER.debug("suiteXmlPath: \"" + suitePath + "\"");
     }
     try {
-      Collection<XmlSuite> allSuites = getParser(suitePath).parse();
+      Collection<XmlSuite> allSuites = Parser.parse(suitePath, getProcessor());
 
       for (XmlSuite s : allSuites) {
-        // If test names were specified, only run these test names
-        if (m_testNames != null) {
-          m_suites.add(extractTestNames(s, m_testNames));
-        } else {
-          m_suites.add(s);
+        if (this.m_parallelMode != null) {
+          s.setParallel(this.m_parallelMode);
         }
+        if (this.m_threadCount > 0) {
+          s.setThreadCount(this.m_threadCount);
+        }
+        if (m_testNames == null) {
+          m_suites.add(s);
+          continue;
+        }
+        // If test names were specified, only run these test names
+        TestNamesMatcher testNamesMatcher = new TestNamesMatcher(s, m_testNames);
+        List<String> missMatchedTestname = testNamesMatcher.getMissMatchedTestNames();
+        if (!missMatchedTestname.isEmpty()) {
+          throw new TestNGException("The test(s) <" + missMatchedTestname + "> cannot be found.");
+        }
+        m_suites.addAll(testNamesMatcher.getSuitesMatchingTestNames());
       }
     } catch (IOException e) {
       e.printStackTrace(System.out);
@@ -319,6 +327,12 @@ public class TestNG {
   }
 
   public void initializeSuitesAndJarFile() {
+    // The IntelliJ plug-in might have invoked this method already so don't initialize suites twice.
+    if (isSuiteInitialized) {
+      return;
+    }
+    isSuiteInitialized = true;
+
     if (!m_suites.isEmpty()) {
       parseSuiteFiles(); //to parse the suite files (<suite-file>), if any
       return;
@@ -352,112 +366,9 @@ public class TestNG {
     // We have a jar file and no XML file was specified: try to find an XML file inside the jar
     File jarFile = new File(m_jarPath);
 
-    try {
+    JarFileUtils utils = new JarFileUtils(getProcessor(),m_xmlPathInJar, m_testNames);
 
-      Utils.log("TestNG", 2, "Trying to open jar file:" + jarFile);
-
-      boolean foundTestngXml = false;
-      List<String> classes = Lists.newArrayList();
-      try (JarFile jf = new JarFile(jarFile)) {
-//      System.out.println("   result: " + jf);
-        Enumeration<JarEntry> entries = jf.entries();
-        while (entries.hasMoreElements()) {
-          JarEntry je = entries.nextElement();
-          if (je.getName().equals(m_xmlPathInJar)) {
-            Parser parser = getParser(jf.getInputStream(je));
-            Collection<XmlSuite> suites = parser.parse();
-            for (XmlSuite suite : suites) {
-              // If test names were specified, only run these test names
-              if (m_testNames != null) {
-                m_suites.add(extractTestNames(suite, m_testNames));
-              } else {
-                m_suites.add(suite);
-              }
-            }
-
-            foundTestngXml = true;
-            break;
-          } else if (je.getName().endsWith(".class")) {
-            int n = je.getName().length() - ".class".length();
-            classes.add(je.getName().replace("/", ".").substring(0, n));
-          }
-        }
-      }
-      if (! foundTestngXml) {
-        Utils.log("TestNG", 1,
-            "Couldn't find the " + m_xmlPathInJar + " in the jar file, running all the classes");
-        XmlSuite xmlSuite = new XmlSuite();
-        xmlSuite.setVerbose(0);
-        xmlSuite.setName("Jar suite");
-        XmlTest xmlTest = new XmlTest(xmlSuite);
-        List<XmlClass> xmlClasses = Lists.newArrayList();
-        for (String cls : classes) {
-          XmlClass xmlClass = new XmlClass(cls);
-          xmlClasses.add(xmlClass);
-        }
-        xmlTest.setXmlClasses(xmlClasses);
-        m_suites.add(xmlSuite);
-      }
-    }
-    catch(IOException ex) {
-      ex.printStackTrace();
-    }
-  }
-
-  private Parser getParser(String path) {
-    Parser result = new Parser(path);
-    initProcessor(result);
-    return result;
-  }
-
-  private Parser getParser(InputStream is) {
-    Parser result = new Parser(is);
-    initProcessor(result);
-    return result;
-  }
-
-  private void initProcessor(Parser result) {
-    result.setPostProcessor(new OverrideProcessor(m_includedGroups, m_excludedGroups));
-  }
-
-  /**
-   * If the XmlSuite contains at least one test named as testNames, return
-   * an XmlSuite that's made only of these tests, otherwise, return the
-   * original suite.
-   */
-  private static XmlSuite extractTestNames(XmlSuite s, List<String> testNames) {
-    extractTestNamesFromChildSuites(s, testNames);
-
-    List<XmlTest> tests = Lists.newArrayList();
-    for (XmlTest xt : s.getTests()) {
-      for (String tn : testNames) {
-        if (xt.getName().equals(tn)) {
-          tests.add(xt);
-        }
-      }
-    }
-
-    if (tests.size() == 0) {
-      throw new TestNGException("The test(s) <" + testNames.toString() + "> cannot be found.");
-    }
-    else {
-      XmlSuite result = (XmlSuite) s.clone();
-      result.getTests().clear();
-      result.getTests().addAll(tests);
-      return result;
-    }
-  }
-
-  private static void extractTestNamesFromChildSuites(XmlSuite s, List<String> testNames) {
-    List<XmlSuite> childSuites = s.getChildSuites();
-    for (int i = 0; i < childSuites.size(); i++) {
-      XmlSuite child = childSuites.get(i);
-      XmlSuite extracted = extractTestNames(child, testNames);
-      // if a new xml suite is created, which means some tests was extracted, then we replace the child
-      if (extracted != child) {
-        childSuites.set(i, extracted);
-      }
-    }
+    m_suites.addAll(utils.extractSuitesFrom(jarFile));
   }
 
   /**
@@ -958,7 +869,8 @@ public class TestNG {
   }
 
   private void initializeDefaultListeners() {
-    addListener((ITestNGListener) new ExitCodeListener(this));
+    this.exitCodeListener = new org.testng.internal.ExitCodeListener();
+    addListener((ITestNGListener) this.exitCodeListener);
     if (m_useDefaultListeners) {
       addReporter(SuiteHTMLReporter.class);
       addReporter(Main.class);
@@ -1056,57 +968,8 @@ public class TestNG {
    * @throws TestNGException if the sanity check fails
    */
   private void sanityCheck() {
-    checkTestNames(m_suites);
-    checkSuiteNames(m_suites);
-  }
-
-  /**
-   * Ensure that two XmlTest within the same XmlSuite don't have the same name
-   */
-  private void checkTestNames(List<XmlSuite> suites) {
-    for (XmlSuite suite : suites) {
-      Set<String> testNames = Sets.newHashSet();
-      for (XmlTest test : suite.getTests()) {
-        if (testNames.contains(test.getName())) {
-          throw new TestNGException("Two tests in the same suite "
-              + "cannot have the same name: " + test.getName());
-        } else {
-          testNames.add(test.getName());
-        }
-      }
-      checkTestNames(suite.getChildSuites());
-    }
-  }
-
-  /**
-   * Ensure that two XmlSuite don't have the same name
-   * Otherwise will be clash in SuiteRunnerMap
-   * See issue #302
-   */
-  private void checkSuiteNames(List<XmlSuite> suites) {
-    checkSuiteNamesInternal(suites, Sets.<String>newHashSet());
-  }
-
-  private void checkSuiteNamesInternal(List<XmlSuite> suites, Set<String> names) {
-    for (XmlSuite suite : suites) {
-      final String name = suite.getName();
-
-      int count = 0;
-      String tmpName = name;
-      while (names.contains(tmpName)) {
-        tmpName = name + " (" + count++ + ")";
-      }
-
-      if (count > 0) {
-        suite.setName(tmpName);
-        names.add(tmpName);
-      } else {
-        names.add(name);
-      }
-
-      names.add(name);
-      checkSuiteNamesInternal(suite.getChildSuites(), names);
-    }
+    XmlSuiteUtils.validateIfSuitesContainDuplicateTests(m_suites);
+    XmlSuiteUtils.adjustSuiteNamesToEnsureUniqueness(m_suites);
   }
 
   /**
@@ -1150,9 +1013,9 @@ public class TestNG {
     }
 
     runExecutionListeners(false /* finish */);
+    exitCode = this.exitCodeListener.getStatus();
 
-    if(!m_hasTests) {
-      setStatus(HAS_NO_TEST);
+    if(!exitCodeListener.hasTests()) {
       if (TestRunner.getVerbose() > 1) {
         System.err.println("[TestNG] No tests found. Nothing was run");
         usage();
@@ -1238,7 +1101,6 @@ public class TestNG {
    */
   public List<ISuite> runSuitesLocally() {
     if (m_suites.isEmpty()) {
-      setStatus(HAS_NO_TEST);
       error("No test suite found. Nothing to run");
       usage();
       return Collections.emptyList();
@@ -1485,7 +1347,7 @@ public class TestNG {
       else {
         error(ex.getMessage());
       }
-      result.setStatus(HAS_FAILURE);
+      result.exitCode = ExitCode.newExitCodeRepresentingFailure();
     }
 
     return result;
@@ -1839,21 +1701,21 @@ public class TestNG {
    * @return true if at least one test failed.
    */
   public boolean hasFailure() {
-    return (getStatus() & HAS_FAILURE) == HAS_FAILURE;
+    return this.exitCode.hasFailure();
   }
 
   /**
    * @return true if at least one test failed within success percentage.
    */
   public boolean hasFailureWithinSuccessPercentage() {
-    return (getStatus() & HAS_FSP) == HAS_FSP;
+    return this.exitCode.hasFailureWithinSuccessPercentage();
   }
 
   /**
    * @return true if at least one test was skipped.
    */
   public boolean hasSkip() {
-    return (getStatus() & HAS_SKIPPED) == HAS_SKIPPED;
+    return this.exitCode.hasSkip();
   }
 
   static void exitWithError(String msg) {
@@ -1946,30 +1808,10 @@ public class TestNG {
     return m_instance;
   }
 
-  /**
-   * @deprecated since 5.1
-   */
   @Deprecated
-  public void setHasFailure(boolean hasFailure) {
-    m_status |= HAS_FAILURE;
-  }
-
   /**
-   * @deprecated since 5.1
+   * @deprecated - This class stands deprecated as of TestNG v6.13
    */
-  @Deprecated
-  public void setHasFailureWithinSuccessPercentage(boolean hasFailureWithinSuccessPercentage) {
-    m_status |= HAS_FSP;
-  }
-
-  /**
-   * @deprecated since 5.1
-   */
-  @Deprecated
-  public void setHasSkip(boolean hasSkip) {
-    m_status |= HAS_SKIPPED;
-  }
-
   public static class ExitCodeListener implements IResultListener2 {
     private TestNG m_mainRunner;
 
@@ -1988,21 +1830,16 @@ public class TestNG {
     @Override
     public void onTestFailure(ITestResult result) {
       setHasRunTests();
-      m_mainRunner.setStatus(HAS_FAILURE);
     }
 
     @Override
     public void onTestSkipped(ITestResult result) {
       setHasRunTests();
-      if ((m_mainRunner.getStatus() & HAS_FAILURE) != 0) {
-        m_mainRunner.setStatus(HAS_SKIPPED);
-      }
     }
 
     @Override
     public void onTestFailedButWithinSuccessPercentage(ITestResult result) {
       setHasRunTests();
-      m_mainRunner.setStatus(HAS_FSP);
     }
 
     @Override
@@ -2025,7 +1862,6 @@ public class TestNG {
     }
 
     private void setHasRunTests() {
-      m_mainRunner.m_hasTests= true;
     }
 
     /**
@@ -2033,7 +1869,6 @@ public class TestNG {
      */
     @Override
     public void onConfigurationFailure(ITestResult itr) {
-      m_mainRunner.setStatus(HAS_FAILURE);
     }
 
     /**
@@ -2041,7 +1876,6 @@ public class TestNG {
      */
     @Override
     public void onConfigurationSkip(ITestResult itr) {
-      m_mainRunner.setStatus(HAS_SKIPPED);
     }
 
     /**

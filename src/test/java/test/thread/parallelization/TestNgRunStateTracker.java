@@ -3,11 +3,15 @@ package test.thread.parallelization;
 import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.Multimap;
 
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ConcurrentLinkedQueue;
 
 /**
  * {@code TestNgRunStateTracker} tracks state information for a TestNG run: suite listener start, suite listener end,
@@ -17,16 +21,14 @@ import java.util.Map;
  */
 public class TestNgRunStateTracker {
 
-    private static final List<EventLog> eventLogs = new ArrayList<>();
+    private static final Collection<EventLog> eventLogs = new ConcurrentLinkedQueue<>();
 
     public static void logEvent(EventLog eventLog) {
-        synchronized(eventLogs) {
-            eventLogs.add(eventLog);
-        }
+        eventLogs.add(eventLog);
     }
 
     //Get all event logs for all suites
-    public static List<EventLog> getAllEventLogs() {
+    public static Collection<EventLog> getAllEventLogs() {
         return eventLogs;
     }
 
@@ -403,7 +405,7 @@ public class TestNgRunStateTracker {
     //Get the test method level event logs for the test methods from the specified suite, test and test class, separated
     //out in a map where the keys are the class instances on which the methods were run.
     public static Multimap<Object, EventLog> getTestMethodEventLogsForClass(String suiteName, String testName,
-            String className) {
+                                                                            String className) {
         Multimap<Object,EventLog> testMethodEventLogs = ArrayListMultimap.create();
 
         for(EventLog eventLog : eventLogs) {
@@ -444,7 +446,6 @@ public class TestNgRunStateTracker {
 
     public static Multimap<Object, EventLog> getTestMethodEventLogsForMethodsDependedOn(String suiteName, String
             testName, String className, String methodName) {
-        //System.out.println("\nProcessing " + className + ", " + methodName);
 
         Multimap<Object,EventLog> testMethodEventLogs = ArrayListMultimap.create();
         Map<Object,EventLog> startEventLogs = getTestMethodListenerStartEventLogsForMethod(suiteName, testName,
@@ -453,9 +454,6 @@ public class TestNgRunStateTracker {
         EventLog eventLog = new ArrayList<>(startEventLogs.values()).get(0);
 
         String[] methodsDependedOn =  (String[])eventLog.getData(EventInfo.METHODS_DEPENDED_ON);
-
-        //System.out.println("Methods depended on(" + className + ", " + methodName + "):" +
-        //        Arrays.toString(methodsDependedOn));
 
         for(String methodDependOn : methodsDependedOn) {
             testMethodEventLogs.putAll(getTestMethodEventLogsForMethod(suiteName, testName, className,
@@ -466,7 +464,7 @@ public class TestNgRunStateTracker {
     }
 
     public static Multimap<Object, EventLog> getTestMethodEventLogsForMethodsBelongingToGroupsDependedOn(String
-            suiteName, String testName, String className, String methodName) {
+                                                                                                                 suiteName, String testName, String className, String methodName) {
 
         Multimap<Object,EventLog> testMethodEventLogs = ArrayListMultimap.create();
         Map<Object,EventLog> startEventLogs = getTestMethodListenerStartEventLogsForMethod(suiteName, testName,
@@ -501,7 +499,7 @@ public class TestNgRunStateTracker {
     //Get the test method level event logs for the test method from the specified suite, test, test class, and event
     //separated out in a map where the keys are the class instances on which the method was run.
     public static Map<Object, EventLog> getTestMethodEventLogsByEventTypeForMethod(String suiteName, String testName,
-            String className, String methodName, TestNgRunEvent event) {
+                                                                                   String className, String methodName, TestNgRunEvent event) {
 
         Map<Object,EventLog> testMethodEventLogs = new HashMap<>();
 
@@ -518,7 +516,7 @@ public class TestNgRunStateTracker {
     //specified suite, test and test class as a map where the keys are the test class instances on which the method was
     //run
     public static Map<Object,EventLog> getTestMethodListenerStartEventLogsForMethod(String suiteName, String testName,
-            String className, String methodName) {
+                                                                                    String className, String methodName) {
         return getTestMethodEventLogsByEventTypeForMethod(suiteName, testName, className, methodName,
                 TestNgRunEvent.LISTENER_TEST_METHOD_START);
     }
@@ -527,7 +525,7 @@ public class TestNgRunStateTracker {
     //specified suite, test and test class as a map where the keys are the test class instances on which the method was
     //run
     public static Map<Object,EventLog> getTestMethodListenerPassEventLogsForMethod(String suiteName, String testName,
-            String className, String methodName) {
+                                                                                   String className, String methodName) {
 
         Map<Object, EventLog> testMethodEventLogs = new HashMap<>();
 
@@ -545,7 +543,7 @@ public class TestNgRunStateTracker {
     //specified suite, test and test class as a map where the keys are the test class instances on which the method was
     //run
     public static Map<Object,EventLog> getTestMethodListenerFailEventLogsForMethod(String suiteName, String testName,
-            String className, String methodName) {
+                                                                                   String className, String methodName) {
 
         Map<Object, EventLog> testMethodEventLogs = new HashMap<>();
 
@@ -563,7 +561,7 @@ public class TestNgRunStateTracker {
     //test method from the specified suite, test and test class as a map where the keys are the test class instances on
     //which the method was run
     public static Map<Object,EventLog> getTestMethodListenerFailWithinSuccessPercentageEventLogsForMethod(String
-            suiteName, String testName, String className, String methodName) {
+                                                                                                                  suiteName, String testName, String className, String methodName) {
 
         Map<Object, EventLog> testMethodEventLogs = new HashMap<>();
 
@@ -713,7 +711,7 @@ public class TestNgRunStateTracker {
     //suite, test and test class separated out in a map where the keys are the class instances on which the method was
     //run.
     public static Map<Object, Long> getTestMethodListenerStartThreadIds(String suiteName, String testName,
-            String className, String methodName) {
+                                                                        String className, String methodName) {
         Map<Object,Long> testMethodEventThreadIds = new HashMap<>();
         Map<Object,EventLog> testMethodEventLogs = getTestMethodListenerStartEventLogsForMethod(suiteName, testName,
                 className, methodName);
@@ -845,7 +843,7 @@ public class TestNgRunStateTracker {
     }
 
     private static boolean belongsToMethod(String suiteName, String testName, String className, String methodName,
-            EventLog eventLog) {
+                                           EventLog eventLog) {
         return suiteName.equals(eventLog.getData(EventInfo.SUITE_NAME)) &&
                 testName.equals(eventLog.getData(EventInfo.TEST_NAME)) &&
                 className.equals(eventLog.getData(EventInfo.CLASS_NAME)) &&
@@ -953,7 +951,10 @@ public class TestNgRunStateTracker {
                 sb.append(", Data provider param: ").append(getData(EventInfo.DATA_PROVIDER_PARAM));
             }
 
-            sb.append(", Time of event: ").append(timeOfEvent);
+            Date now = new Date(timeOfEvent);
+            SimpleDateFormat sdfDate = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS");
+
+            sb.append(", Time of event: ").append(sdfDate.format(timeOfEvent));
             sb.append(", Thread ID: ").append(threadId);
             sb.append("}");
             return sb.toString();

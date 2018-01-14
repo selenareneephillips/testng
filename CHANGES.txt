@@ -1,4 +1,44 @@
 Current
+=======
+Fixed: GITHUB-1659: New line characters are removed from stack traces in testng-results.xml (Krishnan Mahadevan)
+Fixed: GITHUB-1503: Consider adding a -n (no execute) option (Krishnan Mahadevan)
+Fixed: GITHUB-1648: Depends on method is not respected on the sequential run on second test that extends same base testClass (Krishnan Mahadevan)
+Fixed: GITHUB-1636: Parallel test run is not working in 6.13.1 (Krishnan Mahadevan)
+New  : GITHUB-1634: Make "-xmlpathinjar" support <suite-files> (Yehui Wang)
+New  : GITHUB-1634: Make "-testnames" find tests from Multi-level parent-child suites (Yehui Wang)
+Fixed: GITHUB-1641: The time for test-method is 8 hours ahead of the the time for suite/class in testng-result xml file (Krishnan Mahadevan)
+Fixed: GITHUB-1649: @Test annotated methods cannot inject java.lang.reflect.Method (Krishnan Mahadevan)
+Fixed: GITHUB-1625: Null fields in parallel method tests (Krishnan Mahadevan)
+Fixed: GITHUB-1605: Research the usefulness of the JVM argument "experimental" (Krishnan Mahadevan)
+New  : GITHUB-1631: data provider class name injection into Factory meta-data (Sergey Korol)
+
+6.13.1
+No functional changes. Released with newer version JCommander (1.72.0)
+
+6.13
+Fixed: GITHUB-1619: ConcurrentHashMap doesn't secure insertion order.(Yehui Wang)
+Fixed: GITHUB-1616: Test cases with priority and dependsOnGroups dependencies, execution order is chaos. (Yehui Wang)
+Fixed: GITHUB-1613: The constructor removed from TestRunner would stop Eclipse working.(Yehui Wang)
+Fixed: GITHUB-1600: Updated in afterInvocation() testResult.status is not used in willRetry condition (Krishnan Mahadevan)
+Fixed: GITHUB-1598: Injected types parameter and optional parameters cannot be used together. (Yehui Wang)
+Fixed: GITHUB-1594: Cannot filter by "testnames" when suite xml is a suite of suites (Krishnan Mahadevan)
+Fixed: GITHUB-1584: Can't run tests from IDEA (Krishnan Mahadevan)
+Fixed: GITHUB-1589: TestNGAntTask should be consistently using the Ant Log API for writing log messages (Krishnan Mahadevan)
+Fixed: GITHUB-1587: TestNG can not guarantee the ExecutionListener Instance as singleton(Yehui Wang)
+Fixed: GITHUB-217: exception in DataProvider doesn't fail test run (Krishnan Mahadevan)
+Fixed: GITHUB-987: Parameters threadCount and parallel doesn't work with maven (Krishnan Mahadevan)
+Fixed: GITHUB-1472: Optimize DynamicGraph.getUnfinishedNodes (Krishnan Mahadevan & Nathan Reynolds)
+Fixed: GITHUB-1566: Invalid XML characters in Params in testng-results.xml (Krishnan Mahadevan)
+Fixed: GITHUB-1554: @Parameters and parameter injection not wroking when used on the same method (Krishnan Mahadevan)
+Fixed: GITHUB-990: NullPointerExceptions after a superclass configuration method fails with configfailurepolicy="continue" (Krishnan Mahadevan)
+Fixed: GITHUB-461 : Annotate annotations with @Documented (Krishnan Mahadevan)
+Fixed: GITHUB-778 : XmlSuite toXml() does NOT add the suite time-out property (Krishnan Mahadevan)
+Fixed: GITHUB-1029: Issue with getting XmlTest from test method (Krishnan Mahadevan)
+Fixed: GITHUB-212: Enable support for providing a URI as suite file location (Krishnan Mahadevan)
+Fixed: GITHUB-161 : Provide a way to customize SAXParserFactory implementation (Krishnan Mahadevan)
+Fixed: GITHUB-1455: Configure XML output of XmlSuite (Krishnan Mahadevan)
+Fixed: GITHUB-1465: Failure policy CONTINUE handling is broken for tests that are skipped in @BeforeMethod method (Krishnan Mahadevan)
+Fixed: GITHUB-1533: Duplicate child suites get added when working with parent/child suite scenario (Krishnan Mahadevan)
 Fixed: GITHUB-949: dependsOnMethods with alwaysRun = true and inheritance fails to find method (Krishnan Mahadevan)
 Fixed: GITHUB-1519: Possibility to retry a test until it FAILED (Krishnan Mahadevan)
 Fixed: GITHUB-980: TestNG run inherited method twice (Krishnan Mahadevan)
@@ -13,6 +53,8 @@ Fixed: GITHUB-328: Attempt to fix unnecessary execution of @Factory-ctors (@beve
 Fixed: GITHUB-1384: Huge performance issue between 6.5.2 and 6.11 (Denis Bazhenov)
 New: Remove Serializable (Julien Herr)
 Fixed: GITHUB-1496: If method contains "$", run only one method, all methods will be run (@JF-Rabbit & Julien Herr)
+Fixed: GITHUB-1220: Recognize annotations on default methods in implemented interface
+New: GITHUB-861: Add @Ignore annotation which disables all tests in a class or a package (Julien Herr)
 
 6.12
 Fixed: GITHUB-1484: Remove irrelevant "targets" for TestNG annotations (Krishnan Mahadevan)

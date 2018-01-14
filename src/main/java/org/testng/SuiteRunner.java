@@ -28,6 +28,9 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentLinkedQueue;
+
 import com.google.inject.Injector;
 
 /**
@@ -67,7 +70,7 @@ public class SuiteRunner implements ISuite, IInvokedMethodListener {
   private Map<Class<? extends IInvokedMethodListener>, IInvokedMethodListener> invokedMethodListeners;
 
   /** The list of all the methods invoked during this run */
-  private List<IInvokedMethod> invokedMethods = Collections.synchronizedList(Lists.<IInvokedMethod>newArrayList());
+  private final Collection<IInvokedMethod> invokedMethods = new ConcurrentLinkedQueue<>();
 
   private List<ITestNGMethod> allTestMethods = Lists.newArrayList();
   private SuiteRunState suiteState = new SuiteRunState();
@@ -790,7 +793,7 @@ public class SuiteRunner implements ISuite, IInvokedMethodListener {
 
   @Override
   public List<IInvokedMethod> getAllInvokedMethods() {
-    return invokedMethods;
+    return new ArrayList<>(invokedMethods);
   }
 
   @Override

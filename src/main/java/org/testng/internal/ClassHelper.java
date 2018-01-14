@@ -13,8 +13,11 @@ import org.testng.collections.Lists;
 import org.testng.collections.Maps;
 import org.testng.collections.Sets;
 import org.testng.internal.annotations.IAnnotationFinder;
+import org.testng.internal.reflect.ReflectionHelper;
 import org.testng.junit.IJUnitTestRunner;
 import org.testng.log4testng.Logger;
+import org.testng.xml.XmlClass;
+import org.testng.xml.XmlSuite;
 import org.testng.xml.XmlTest;
 
 import java.lang.reflect.Constructor;
@@ -22,6 +25,7 @@ import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -177,7 +181,7 @@ public final class ClassHelper {
    */
   public static Set<Method> getAvailableMethods(Class<?> clazz) {
     Map<String, Set<Method>> methods = Maps.newHashMap();
-    for (final Method declaredMethod : clazz.getDeclaredMethods()) {
+    for (final Method declaredMethod : ReflectionHelper.getLocalMethods(clazz)) {
       appendMethod(methods, declaredMethod);
     }
 
@@ -612,6 +616,34 @@ public final class ClassHelper {
     }
 
     return result;
+  }
+
+  /**
+   * @param cls   - The class to look for.
+   * @param suite - The {@link XmlSuite} whose &lt;test&gt; tags needs to be searched in.
+   * @return - All the {@link XmlClass} objects that share the same &lt;test&gt; tag as the class.
+   */
+  public static XmlClass[] findClassesInSameTest(Class<?> cls, XmlSuite suite) {
+    Collection<XmlClass> vResult = Sets.newHashSet();
+    for (XmlTest test : suite.getTests()) {
+      vResult.addAll(findClassesInSameTest(cls, test));
+    }
+
+    return vResult.toArray(new XmlClass[vResult.size()]);
+  }
+
+  private static Collection<XmlClass> findClassesInSameTest(Class<?> cls, XmlTest xmlTest) {
+    Collection<XmlClass> vResult = Sets.newHashSet();
+    String className = cls.getName();
+    for (XmlClass testClass : xmlTest.getXmlClasses()) {
+      if (testClass.getName().equals(className)) {
+        // Found it, add all the classes in this test in the result
+        vResult.addAll(xmlTest.getXmlClasses());
+        break;
+      }
+    }
+
+    return vResult;
   }
 
 }

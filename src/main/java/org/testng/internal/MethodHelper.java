@@ -1,6 +1,7 @@
 package org.testng.internal;
 
 import java.lang.reflect.Method;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Comparator;
 import java.util.List;
@@ -9,8 +10,12 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.regex.Pattern;
 
+import org.testng.IInvokedMethod;
+import org.testng.IMethodInstance;
+import org.testng.ITestClass;
 import org.testng.ITestNGMethod;
 import org.testng.TestNGException;
+import org.testng.annotations.IConfigurationAnnotation;
 import org.testng.annotations.ITestAnnotation;
 import org.testng.annotations.ITestOrConfiguration;
 import org.testng.collections.Lists;
@@ -169,6 +174,31 @@ public class MethodHelper {
     return null == test || test.getEnabled();
   }
 
+  static boolean isDisabled(ITestOrConfiguration test) {
+    return !isEnabled(test);
+  }
+
+  static boolean isAlwaysRun(IConfigurationAnnotation configurationAnnotation) {
+    if(null == configurationAnnotation) {
+      return false;
+    }
+
+    boolean alwaysRun= false;
+    if ((configurationAnnotation.getAfterSuite()
+            || configurationAnnotation.getAfterTest()
+            || configurationAnnotation.getAfterTestClass()
+            || configurationAnnotation.getAfterTestMethod()
+            || configurationAnnotation.getBeforeTestMethod()
+            || configurationAnnotation.getBeforeTestClass()
+            || configurationAnnotation.getBeforeTest()
+            || configurationAnnotation.getBeforeSuite())
+            && configurationAnnotation.getAlwaysRun()) {
+      alwaysRun = true;
+    }
+
+    return alwaysRun;
+  }
+
   /**
    * Extracts the unique list of <code>ITestNGMethod</code>s.
    */
@@ -308,6 +338,69 @@ public class MethodHelper {
     List<ITestNGMethod> result = g.findPredecessors(method);
     return result;
   }
+
+  //TODO: This needs to be revisited so that, we dont update the parameter list "methodList"
+  //but we are returning the values.
+  public static void fixMethodsWithClass(ITestNGMethod[] methods,
+                                   ITestClass testCls,
+                                   List<ITestNGMethod> methodList) {
+    for (ITestNGMethod itm : methods) {
+      itm.setTestClass(testCls);
+
+      if (methodList != null) {
+        methodList.add(itm);
+      }
+    }
+  }
+
+  public static List<ITestNGMethod> invokedMethodsToMethods(Collection<IInvokedMethod> invokedMethods) {
+    List<ITestNGMethod> result = Lists.newArrayList();
+    for (IInvokedMethod im : invokedMethods) {
+      ITestNGMethod tm = im.getTestMethod();
+      tm.setDate(im.getDate());
+      result.add(tm);
+    }
+
+    return result;
+  }
+
+
+  public static List<IMethodInstance> methodsToMethodInstances(List<ITestNGMethod> sl) {
+    List<IMethodInstance> result = new ArrayList<>();
+    for (ITestNGMethod iTestNGMethod : sl) {
+      result.add(new MethodInstance(iTestNGMethod));
+    }
+    return result;
+  }
+
+  public static List<ITestNGMethod> methodInstancesToMethods(List<IMethodInstance> methodInstances) {
+    List<ITestNGMethod> result = Lists.newArrayList();
+    for (IMethodInstance imi : methodInstances) {
+      result.add(imi.getMethod());
+    }
+    return result;
+  }
+
+  public static void dumpInvokedMethodsInfoToConsole(Collection<IInvokedMethod> iInvokedMethods, int currentVerbosity) {
+    if (currentVerbosity < 3) {
+      return;
+    }
+    System.out.println("===== Invoked methods");
+    for (IInvokedMethod im : iInvokedMethods) {
+      if (im.isTestMethod()) {
+        System.out.print("    ");
+      }
+      else if (im.isConfigurationMethod()) {
+        System.out.print("  ");
+      }
+      else {
+        continue;
+      }
+      System.out.println("" + im);
+    }
+    System.out.println("=====");
+  }
+
 
   protected static String calculateMethodCanonicalName(Class<?> methodClass, String methodName) {
     Set<Method> methods = ClassHelper.getAvailableMethods(methodClass); // TESTNG-139

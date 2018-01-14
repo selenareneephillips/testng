@@ -2,15 +2,13 @@ package org.testng.xml;
 
 import org.testng.collections.Lists;
 import org.testng.collections.Maps;
-import org.xml.sax.SAXException;
-
-import javax.xml.parsers.ParserConfigurationException;
 
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
+import java.net.URI;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
@@ -58,7 +56,7 @@ public class Parser {
    * unknown.
    */
   public Parser(String fileName) {
-    init(fileName, null, null);
+    init(fileName, null);
   }
 
   /**
@@ -67,14 +65,14 @@ public class Parser {
    * found in the classpath.
    */
   public Parser() throws FileNotFoundException {
-    init(null, null, null);
+    init(null, null);
   }
 
   public Parser(InputStream is) {
-    init(null, is, null);
+    init(null, is);
   }
 
-  private void init(String fileName, InputStream is, IFileParser fp) {
+  private void init(String fileName, InputStream is) {
     m_fileName = fileName != null ? fileName : DEFAULT_FILENAME;
     m_inputStream = is;
   }
@@ -89,31 +87,6 @@ public class Parser {
   public void setLoadClasses(boolean loadClasses) {
     m_loadClasses = loadClasses;
   }
-
-  /**
-   * Returns an input stream on the resource named DEFAULT_FILENAME.
-   *
-   * @return an input stream on the resource named DEFAULT_FILENAME.
-   * @throws FileNotFoundException if the DEFAULT_FILENAME resource is not
-   * found in the classpath.
-   */
-//  private static InputStream getInputStream(String fileName) throws FileNotFoundException {
-//    // Try to look for the DEFAULT_FILENAME from the jar
-//    ClassLoader classLoader = Thread.currentThread().getContextClassLoader();
-//    InputStream in;
-//    // TODO CQ is this OK? should we fall back to the default classloader if the
-//    // context classloader fails.
-//    if (classLoader != null) {
-//      in = classLoader.getResourceAsStream(fileName);
-//    }
-//    else {
-//      in = Parser.class.getResourceAsStream(fileName);
-//    }
-//    if (in == null) {
-//      throw new FileNotFoundException(fileName);
-//    }
-//    return in;
-//  }
 
   private static IFileParser getParser(String fileName) {
     for (ISuiteParser parser : PARSERS) {
@@ -135,9 +108,7 @@ public class Parser {
    * @throws IOException if an I/O error occurs while parsing the test suite file or
    * if the default testng.xml file is not found.
    */
-  public Collection<XmlSuite> parse()
-    throws IOException
-  {
+  public Collection<XmlSuite> parse() throws IOException {
     // Each suite found is put in this list, using their canonical
     // path to make sure we don't add a same file twice
     // (e.g. "testng.xml" and "./testng.xml")
@@ -149,25 +120,37 @@ public class Parser {
     List<String> toBeRemoved = Lists.newArrayList();
 
     if (m_fileName != null) {
-      File mainFile = new File(m_fileName);
-      toBeParsed.add(mainFile.getCanonicalPath());
+      URI uri = constructURI(m_fileName);
+      if (uri == null || uri.getScheme() == null) {
+        uri = new File(m_fileName).toURI();
+      }
+      if ("file".equalsIgnoreCase(uri.getScheme())) {
+        File mainFile = new File(uri);
+        toBeParsed.add(mainFile.getCanonicalPath());
+      } else {
+        toBeParsed.add(uri.toString());
+      }
     }
 
     /*
      * Keeps a track of parent XmlSuite for each child suite
      */
     Map<String, XmlSuite> childToParentMap = Maps.newHashMap();
-    while (toBeParsed.size() > 0) {
+    while (!toBeParsed.isEmpty()) {
 
       for (String currentFile : toBeParsed) {
-        File currFile = new File(currentFile);
-        File parentFile = currFile.getParentFile();
-        InputStream inputStream = m_inputStream != null
-            ? m_inputStream
-            : new FileInputStream(currentFile);
+        File parentFile = null;
+        InputStream inputStream = null;
+
+        if (hasFileScheme(currentFile)) {
+          File currFile = new File(currentFile);
+          parentFile = currFile.getParentFile();
+          inputStream = m_inputStream != null ? m_inputStream : new FileInputStream(currFile);
+        }
 
         IFileParser<XmlSuite> fileParser = getParser(currentFile);
         XmlSuite currentXmlSuite = fileParser.parse(currentFile, inputStream, m_loadClasses);
+        currentXmlSuite.setParsed(true);
         processedSuites.add(currentFile);
         toBeRemoved.add(currentFile);
 
@@ -184,13 +167,15 @@ public class Parser {
         }
 
         List<String> suiteFiles = currentXmlSuite.getSuiteFiles();
-        if (suiteFiles.size() > 0) {
+        if (!suiteFiles.isEmpty()) {
           for (String path : suiteFiles) {
-            String canonicalPath;
-            if (parentFile != null && new File(parentFile, path).exists()) {
-              canonicalPath = new File(parentFile, path).getCanonicalPath();
-            } else {
-              canonicalPath = new File(path).getCanonicalPath();
+            String canonicalPath = path;
+            if (hasFileScheme(path)) {
+              if (parentFile != null && new File(parentFile, path).exists()) {
+                canonicalPath = new File(parentFile, path).getCanonicalPath();
+              } else {
+                canonicalPath = new File(path).getCanonicalPath();
+              }
             }
             if (!processedSuites.contains(canonicalPath)) {
               toBeAdded.add(canonicalPath);
@@ -203,14 +188,10 @@ public class Parser {
       //
       // Add and remove files from toBeParsed before we loop
       //
-      for (String s : toBeRemoved) {
-        toBeParsed.remove(s);
-      }
+      toBeParsed.removeAll(toBeRemoved);
       toBeRemoved = Lists.newArrayList();
 
-      for (String s : toBeAdded) {
-        toBeParsed.add(s);
-      }
+      toBeParsed.addAll(toBeAdded);
       toBeAdded = Lists.newArrayList();
 
     }
@@ -219,9 +200,7 @@ public class Parser {
     List<XmlSuite> resultList = Lists.newArrayList();
     resultList.add(resultSuite);
 
-    boolean postProcess = true;
-
-    if (postProcess && m_postProcessor != null) {
+    if (m_postProcessor != null) {
       return m_postProcessor.process(resultList);
     } else {
       return resultList;
@@ -229,19 +208,64 @@ public class Parser {
 
   }
 
-  public List<XmlSuite> parseToList()
-    throws ParserConfigurationException, SAXException, IOException
-  {
-    List<XmlSuite> result = Lists.newArrayList();
-    Collection<XmlSuite> suites = parse();
-    for (XmlSuite suite : suites) {
-      result.add(suite);
+  /**
+   *
+   * @param uri - The uri to be verified.
+   * @return - <code>true</code> if the uri has "file:" as its scheme.
+   */
+  public static boolean hasFileScheme(String uri) {
+    URI constructedURI = constructURI(uri);
+    if (constructedURI == null) {
+      //There were difficulties in constructing the URI. Falling back to considering the URI as a file.
+      return true;
     }
+    String scheme = constructedURI.getScheme();
+    //A URI is regarded as having a file scheme if it either has its scheme as "file"
+    //(or) if the scheme is null (which is true when uri's represent local file system path.)
+    return scheme == null || "file".equalsIgnoreCase(scheme);
+  }
 
+  public List<XmlSuite> parseToList() throws IOException {
+    return Lists.newArrayList(parse());
+  }
+
+  public static Collection<XmlSuite> parse(String suite, IPostProcessor processor) throws IOException {
+    return newParser(suite, processor).parse();
+  }
+
+  public static Collection<XmlSuite> parse(InputStream is, IPostProcessor processor) throws IOException {
+    return newParser(is, processor).parse();
+  }
+  
+  public static boolean canParse(String fileName) {
+    for (ISuiteParser parser : PARSERS) {
+      if (parser.accept(fileName)) {
+        return true;
+      }
+    }
+      
+    return DEFAULT_FILE_PARSER.accept(fileName);
+  }
+
+  private static Parser newParser(String path, IPostProcessor processor) {
+    Parser result = new Parser(path);
+    result.setPostProcessor(processor);
     return result;
   }
 
+  private static Parser newParser(InputStream is, IPostProcessor processor) {
+    Parser result = new Parser(is);
+    result.setPostProcessor(processor);
+    return result;
+  }
 
+  private static URI constructURI(String text) {
+    try {
+      return URI.create(text);
+    } catch (Exception e) {
+      return null;
+    }
+  }
 
 }
 

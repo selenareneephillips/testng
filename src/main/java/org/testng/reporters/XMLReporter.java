@@ -7,6 +7,7 @@ import org.testng.ITestContext;
 import org.testng.ITestNGMethod;
 import org.testng.Reporter;
 import org.testng.internal.Utils;
+import org.testng.util.TimeUtils;
 import org.testng.xml.XmlSuite;
 
 import java.io.File;
@@ -46,7 +47,6 @@ public class XMLReporter implements IReporter {
     int ignored = 0;
     for (ISuite s : suites) {
       Map<String, ISuiteResult> suiteResults = s.getResults();
-      synchronized(suiteResults) {
         for (ISuiteResult sr : suiteResults.values()) {
           ITestContext testContext = sr.getTestContext();
           passed += testContext.getPassedTests().size();
@@ -54,7 +54,6 @@ public class XMLReporter implements IReporter {
           skipped += testContext.getSkippedTests().size();
           ignored += testContext.getExcludedMethods().size();
         }
-      }
     }
 
     rootBuffer = new XMLStringBuffer();
@@ -167,17 +166,15 @@ public class XMLReporter implements IReporter {
     Date minStartDate = new Date();
     Date maxEndDate = null;
     // TODO: We could probably optimize this in order not to traverse this twice
-    synchronized(results) {
-      for (Map.Entry<String, ISuiteResult> result : results.entrySet()) {
-        ITestContext testContext = result.getValue().getTestContext();
-        Date startDate = testContext.getStartDate();
-        Date endDate = testContext.getEndDate();
-        if (minStartDate.after(startDate)) {
-          minStartDate = startDate;
-        }
-        if (maxEndDate == null || maxEndDate.before(endDate)) {
-          maxEndDate = endDate != null ? endDate : startDate;
-        }
+    for (Map.Entry<String, ISuiteResult> result : results.entrySet()) {
+      ITestContext testContext = result.getValue().getTestContext();
+      Date startDate = testContext.getStartDate();
+      Date endDate = testContext.getEndDate();
+      if (minStartDate.after(startDate)) {
+        minStartDate = startDate;
+      }
+      if (maxEndDate == null || maxEndDate.before(endDate)) {
+        maxEndDate = endDate != null ? endDate : startDate;
       }
     }
     // The suite could be completely empty
@@ -193,11 +190,9 @@ public class XMLReporter implements IReporter {
    */
   public static void addDurationAttributes(XMLReporterConfig config, Properties attributes,
       Date minStartDate, Date maxEndDate) {
-    SimpleDateFormat format = new SimpleDateFormat(config.getTimestampFormat());
-    TimeZone utc = TimeZone.getTimeZone("UTC");
-    format.setTimeZone(utc);
-    String startTime = format.format(minStartDate);
-    String endTime = format.format(maxEndDate);
+
+    String startTime = TimeUtils.timeInUTC(minStartDate.getTime(), config.getTimestampFormat());
+    String endTime = TimeUtils.timeInUTC(maxEndDate.getTime(), config.getTimestampFormat());
     long duration = maxEndDate.getTime() - minStartDate.getTime();
 
     attributes.setProperty(XMLReporterConfig.ATTR_STARTED_AT, startTime);

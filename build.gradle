@@ -21,15 +21,26 @@ buildscript {
     dependencies {
         classpath "io.codearte.gradle.nexus:gradle-nexus-staging-plugin:0.5.3"
         classpath 'org.hibernate.build.gradle:version-injection-plugin:1.0.0'
-	classpath 'org.sonarsource.scanner.gradle:sonarqube-gradle-plugin:2.2.1'
+        classpath 'org.sonarsource.scanner.gradle:sonarqube-gradle-plugin:2.2.1'
     }
 }
 
 plugins {
+    id 'com.gradle.build-scan' version '1.9'
     id "com.jfrog.bintray" version "1.7.3"
     id "com.jfrog.artifactory" version "4.4.10"
     id "nebula.optional-base" version "3.1.0"
     id "nebula.provided-base" version "3.1.0"
+}
+
+buildScan {
+    licenseAgreementUrl = 'https://gradle.com/terms-of-service'
+    licenseAgree = 'yes'
+    link 'GitHub', 'https://github.com/cbeust/testng/tree/master'
+    if (System.getenv('CI')) {
+        publishOnFailure()
+        tag 'CI'
+    }
 }
 
 task wrapper(type: Wrapper) {
@@ -37,7 +48,7 @@ task wrapper(type: Wrapper) {
 }
 
 group = 'org.testng'
-version = '6.11.1-SNAPSHOT'
+version = '6.14-SNAPSHOT'
 
 apply plugin: 'java'
 apply plugin: 'groovy'
@@ -78,6 +89,7 @@ dependencies {
     testCompile 'org.assertj:assertj-core:2.5.0'
     testCompile 'org.codehaus.groovy:groovy-all:2.4.7'
     testCompile 'org.spockframework:spock-core:1.0-groovy-2.4'
+    testCompile 'org.mockito:mockito-core:2.12.0'
 }
 
 task sourceJar(type: Jar) {
@@ -111,8 +123,8 @@ jar {
 }
 
 versionInjection {
-    into( 'org.testng.internal.Version', 'VERSION' )
-    into( 'org.testng.internal.Version', 'getVersionString' )
+    into('org.testng.internal.Version', 'VERSION')
+    into('org.testng.internal.Version', 'getVersionString')
 }
 
 test {
@@ -122,18 +134,15 @@ test {
     testLogging.showStandardStreams = true
     systemProperties = System.getProperties()
     systemProperties['test.resources.dir'] = 'build/resources/test/'
-	maxHeapSize = '1500m'
-    afterTest { desc, result ->
-        println "Executed test ==> ${desc.className}.${desc.name}() with result: ${result.resultType}"
-    }
+    maxHeapSize = '1500m'
 }
 
 allprojects {
     tasks.withType(Javadoc) {
         if (JavaVersion.current().isJava8Compatible()) {
             options.addStringOption('Xdoclint:none', '-quiet')
-	}
-	options.links("https://docs.oracle.com/javase/7/docs/api")
+        }
+        options.links("https://docs.oracle.com/javase/7/docs/api")
     }
 }
 
@@ -146,6 +155,34 @@ if (JavaVersion.current().isJava8Compatible()) {
             property "sonar.github.login", "testng-bot"
         }
     }
+
+    sourceSets {
+        test8 {
+            java {
+                srcDirs = ['src/test/java8']
+
+            }
+            resources {
+                srcDirs = ['src/test/resources']
+            }
+            compileClasspath += main.output + test.output
+            runtimeClasspath += main.output + test.output
+            sourceCompatibility = 1.8
+            targetCompatibility = 1.8
+
+        }
+    }
+
+    task testJava8(type: Test) {
+        testClassesDir = sourceSets.test8.output.classesDir
+        classpath += sourceSets.test8.runtimeClasspath
+
+        useTestNG() {
+            suites 'src/test/resources/testng-java8.xml'
+        }
+    }
+
+    test.finalizedBy testJava8
 }
 
 apply from: 'gradle/publishing.gradle'
