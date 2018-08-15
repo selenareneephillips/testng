@@ -36,11 +36,11 @@ import java.util.List;
  *
  * @author Cedric Beust <cedric@beust.com>
  * @author nullin <nalin.makar * gmail.com>
- *
  */
 public class MethodInvocationHelper {
 
-  protected static Object invokeMethodNoCheckedException(Method thisMethod, Object instance, List<Object> parameters) {
+  protected static Object invokeMethodNoCheckedException(
+      Method thisMethod, Object instance, List<Object> parameters) {
     try {
       return invokeMethod(thisMethod, instance, parameters);
     } catch (InvocationTargetException | IllegalAccessException e) {
@@ -50,11 +50,13 @@ public class MethodInvocationHelper {
     }
   }
 
-  protected static void invokeMethodConsideringTimeout(ITestNGMethod tm,
-                                         ConstructorOrMethod method,
-                                         Object targetInstance,
-                                         Object[] params,
-                                         ITestResult testResult) throws Throwable {
+  protected static void invokeMethodConsideringTimeout(
+      ITestNGMethod tm,
+      ConstructorOrMethod method,
+      Object targetInstance,
+      Object[] params,
+      ITestResult testResult)
+      throws Throwable {
     if (MethodHelper.calculateTimeOut(tm) <= 0) {
       MethodInvocationHelper.invokeMethod(method.getMethod(), targetInstance, params);
     } else {
@@ -70,8 +72,8 @@ public class MethodInvocationHelper {
   }
 
   protected static Object invokeMethod(Method thisMethod, Object instance, List<Object> parameters)
-    throws InvocationTargetException, IllegalAccessException {
-    return invokeMethod(thisMethod, instance, parameters.toArray(new Object[parameters.size()]));
+      throws InvocationTargetException, IllegalAccessException {
+    return invokeMethod(thisMethod, instance, parameters.toArray(new Object[0]));
   }
 
   protected static Object invokeMethod(Method thisMethod, Object instance, Object[] parameters)
@@ -95,8 +97,8 @@ public class MethodInvocationHelper {
           boolean found = false;
           for (; clazz != null; clazz = clazz.getSuperclass()) {
             try {
-              thisMethod = clazz.getDeclaredMethod(thisMethod.getName(),
-                  thisMethod.getParameterTypes());
+              thisMethod =
+                  clazz.getDeclaredMethod(thisMethod.getName(), thisMethod.getParameterTypes());
               found = true;
               break;
             } catch (Exception e2) {
@@ -105,10 +107,15 @@ public class MethodInvocationHelper {
           if (!found) {
             // should we assert here? Or just allow it to fail on invocation?
             if (thisMethod.getDeclaringClass().equals(instance.getClass())) {
-              throw new RuntimeException("Can't invoke method " + thisMethod + ", probably due to classloader mismatch");
+              throw new RuntimeException(
+                  "Can't invoke method " + thisMethod + ", probably due to classloader mismatch");
             }
-            throw new RuntimeException("Can't invoke method " + thisMethod
-                + " on this instance of " + instance.getClass() + " due to class mismatch");
+            throw new RuntimeException(
+                "Can't invoke method "
+                    + thisMethod
+                    + " on this instance of "
+                    + instance.getClass()
+                    + " due to class mismatch");
           }
         }
       }
@@ -124,10 +131,16 @@ public class MethodInvocationHelper {
     return thisMethod.invoke(instance, parameters);
   }
 
-  protected static Iterator<Object[]> invokeDataProvider(Object instance, Method dataProvider,
-      ITestNGMethod method, ITestContext testContext, Object fedInstance,
+  @SuppressWarnings("unchecked")
+  protected static Iterator<Object[]> invokeDataProvider(
+      Object instance,
+      Method dataProvider,
+      ITestNGMethod method,
+      ITestContext testContext,
+      Object fedInstance,
       IAnnotationFinder annotationFinder) {
-    List<Object> parameters = getParameters(dataProvider, method, testContext, fedInstance, annotationFinder);
+    List<Object> parameters =
+        getParameters(dataProvider, method, testContext, fedInstance, annotationFinder);
     Object result = invokeMethodNoCheckedException(dataProvider, instance, parameters);
     if (result == null) {
       throw new TestNGException("Data Provider " + dataProvider + " returned a null value");
@@ -152,12 +165,20 @@ public class MethodInvocationHelper {
         return (Iterator<Object[]>) result;
       }
     }
-    throw new TestNGException("Data Provider " + dataProvider + " must return"
-          + " either Object[][] or Object[] or Iterator<Object[]> or Iterator<Object>, not " + dataProvider.getReturnType());
+    throw new TestNGException(
+        "Data Provider "
+            + dataProvider
+            + " must return"
+            + " either Object[][] or Object[] or Iterator<Object[]> or Iterator<Object>, not "
+            + dataProvider.getReturnType());
   }
 
-  private static List<Object> getParameters(Method dataProvider, ITestNGMethod method, ITestContext testContext,
-                                            Object fedInstance, IAnnotationFinder annotationFinder) {
+  private static List<Object> getParameters(
+      Method dataProvider,
+      ITestNGMethod method,
+      ITestContext testContext,
+      Object fedInstance,
+      IAnnotationFinder annotationFinder) {
     // Go through all the parameters declared on this Data Provider and
     // make sure we have at most one Method and one ITestContext.
     // Anything else is an error
@@ -183,7 +204,7 @@ public class MethodInvocationHelper {
         if (isTestInstance) {
           parameters.add(fedInstance);
         } else {
-          unresolved.add(new Pair<Integer, Class<?>>(i, cls));
+          unresolved.add(new Pair<>(i, cls));
         }
       }
       i++;
@@ -199,46 +220,32 @@ public class MethodInvocationHelper {
     return parameters;
   }
 
-  /**
-   * Invokes the <code>run</code> method of the <code>IHookable</code>.
-   *
-   * @param testInstance
-   *          the instance to invoke the method in
-   * @param parameters
-   *          the parameters to be passed to <code>IHookCallBack</code>
-   * @param thisMethod
-   *          the method to be invoked through the <code>IHookCallBack</code>
-   * @param testResult
-   *          the current <code>ITestResult</code> passed to
-   *          <code>IHookable.run</code>
-   * @throws NoSuchMethodException
-   * @throws IllegalAccessException
-   * @throws InvocationTargetException
-   * @throws Throwable
-   *           thrown if the reflective call to
-   *           <tt>thisMethod</code> results in an exception
-   */
-  protected static void invokeHookable(final Object testInstance, final Object[] parameters,
-                                       final IHookable hookable, final Method thisMethod,
-                                       final ITestResult testResult) throws Throwable {
+  protected static void invokeHookable(
+      final Object testInstance,
+      final Object[] parameters,
+      final IHookable hookable,
+      final Method thisMethod,
+      final ITestResult testResult)
+      throws Throwable {
     final Throwable[] error = new Throwable[1];
 
-    IHookCallBack callback = new IHookCallBack() {
-      @Override
-      public void runTestMethod(ITestResult tr) {
-        try {
-          invokeMethod(thisMethod, testInstance, parameters);
-        } catch (Throwable t) {
-          error[0] = t;
-          tr.setThrowable(t); // make Throwable available to IHookable
-        }
-      }
+    IHookCallBack callback =
+        new IHookCallBack() {
+          @Override
+          public void runTestMethod(ITestResult tr) {
+            try {
+              invokeMethod(thisMethod, testInstance, parameters);
+            } catch (Throwable t) {
+              error[0] = t;
+              tr.setThrowable(t); // make Throwable available to IHookable
+            }
+          }
 
-      @Override
-      public Object[] getParameters() {
-        return parameters;
-      }
-    };
+          @Override
+          public Object[] getParameters() {
+            return parameters;
+          }
+        };
     hookable.run(callback, testResult);
     if (error[0] != null) {
       throw error[0];
@@ -246,20 +253,25 @@ public class MethodInvocationHelper {
   }
 
   /**
-   * Invokes a method on a separate thread in order to allow us to timeout the
-   * invocation. It uses as implementation an <code>Executor</code> and a
-   * <code>CountDownLatch</code>.
+   * Invokes a method on a separate thread in order to allow us to timeout the invocation. It uses
+   * as implementation an <code>Executor</code> and a <code>CountDownLatch</code>.
    */
-  protected static void invokeWithTimeout(ITestNGMethod tm, Object instance,
-      Object[] parameterValues, ITestResult testResult)
+  protected static void invokeWithTimeout(
+      ITestNGMethod tm, Object instance, Object[] parameterValues, ITestResult testResult)
       throws InterruptedException, ThreadExecutionException {
     invokeWithTimeout(tm, instance, parameterValues, testResult, null);
   }
 
-  protected static void invokeWithTimeout(ITestNGMethod tm, Object instance,
-      Object[] parameterValues, ITestResult testResult, IHookable hookable)
+  protected static void invokeWithTimeout(
+      ITestNGMethod tm,
+      Object instance,
+      Object[] parameterValues,
+      ITestResult testResult,
+      IHookable hookable)
       throws InterruptedException, ThreadExecutionException {
-    if (ThreadUtil.isTestNGThread() && testResult.getTestContext().getCurrentXmlTest().getParallel() != XmlSuite.ParallelMode.TESTS) {
+    if (ThreadUtil.isTestNGThread()
+        && testResult.getTestContext().getCurrentXmlTest().getParallel()
+            != XmlSuite.ParallelMode.TESTS) {
       // We are already running in our own executor, don't create another one (or we will
       // lose the time out of the enclosing executor).
       invokeWithTimeoutWithNoExecutor(tm, instance, parameterValues, testResult, hookable);
@@ -268,10 +280,15 @@ public class MethodInvocationHelper {
     }
   }
 
-  private static void invokeWithTimeoutWithNoExecutor(ITestNGMethod tm, Object instance,
-      Object[] parameterValues, ITestResult testResult, IHookable hookable) {
+  private static void invokeWithTimeoutWithNoExecutor(
+      ITestNGMethod tm,
+      Object instance,
+      Object[] parameterValues,
+      ITestResult testResult,
+      IHookable hookable) {
 
-    InvokeMethodRunnable imr = new InvokeMethodRunnable(tm, instance, parameterValues, hookable, testResult);
+    InvokeMethodRunnable imr =
+        new InvokeMethodRunnable(tm, instance, parameterValues, hookable, testResult);
     long startTime = System.currentTimeMillis();
     long realTimeOut = MethodHelper.calculateTimeOut(tm);
     try {
@@ -279,9 +296,13 @@ public class MethodInvocationHelper {
       if (System.currentTimeMillis() <= startTime + realTimeOut) {
         testResult.setStatus(ITestResult.SUCCESS);
       } else {
-        ThreadTimeoutException exception = new ThreadTimeoutException("Method "
-            + tm.getQualifiedName() + "()"
-            + " didn't finish within the time-out " + realTimeOut);
+        ThreadTimeoutException exception =
+            new ThreadTimeoutException(
+                "Method "
+                    + tm.getQualifiedName()
+                    + "()"
+                    + " didn't finish within the time-out "
+                    + realTimeOut);
         testResult.setThrowable(exception);
         testResult.setStatus(ITestResult.FAILURE);
       }
@@ -291,12 +312,17 @@ public class MethodInvocationHelper {
     }
   }
 
-  private static void invokeWithTimeoutWithNewExecutor(ITestNGMethod tm, Object instance,
-      Object[] parameterValues, ITestResult testResult, IHookable hookable)
+  private static void invokeWithTimeoutWithNewExecutor(
+      ITestNGMethod tm,
+      Object instance,
+      Object[] parameterValues,
+      ITestResult testResult,
+      IHookable hookable)
       throws InterruptedException, ThreadExecutionException {
     IExecutor exec = ThreadUtil.createExecutor(1, tm.getMethodName());
 
-    InvokeMethodRunnable imr = new InvokeMethodRunnable(tm, instance, parameterValues, hookable, testResult);
+    InvokeMethodRunnable imr =
+        new InvokeMethodRunnable(tm, instance, parameterValues, hookable, testResult);
     IFutureResult future = exec.submitRunnable(imr);
     exec.shutdown();
     long realTimeOut = MethodHelper.calculateTimeOut(tm);
@@ -304,9 +330,13 @@ public class MethodInvocationHelper {
 
     if (!finished) {
       exec.stopNow();
-      ThreadTimeoutException exception = new ThreadTimeoutException("Method "
-          + tm.getQualifiedName() + "()"
-          + " didn't finish within the time-out " + realTimeOut);
+      ThreadTimeoutException exception =
+          new ThreadTimeoutException(
+              "Method "
+                  + tm.getQualifiedName()
+                  + "()"
+                  + " didn't finish within the time-out "
+                  + realTimeOut);
       StackTraceElement[][] stacktraces = exec.getStackTraces();
       if (stacktraces.length > 0) {
         exception.setStackTrace(stacktraces[0]);
@@ -314,8 +344,10 @@ public class MethodInvocationHelper {
       testResult.setThrowable(exception);
       testResult.setStatus(ITestResult.FAILURE);
     } else {
-      Utils.log("Invoker " + Thread.currentThread().hashCode(), 3, "Method " + tm.getMethodName()
-          + " completed within the time-out " + tm.getTimeOut());
+      Utils.log(
+          "Invoker " + Thread.currentThread().hashCode(),
+          3,
+          "Method " + tm.getMethodName() + " completed within the time-out " + tm.getTimeOut());
 
       // We don't need the result from the future but invoking get() on it
       // will trigger the exception that was thrown, if any
@@ -323,35 +355,39 @@ public class MethodInvocationHelper {
       // done.await();
 
       testResult.setStatus(ITestResult.SUCCESS); // if no exception till here
-                                                 // than SUCCESS
+      // than SUCCESS
     }
   }
 
-  protected static void invokeConfigurable(final Object instance, final Object[] parameters,
-                                           final IConfigurable configurableInstance, final Method thisMethod,
-                                           final ITestResult testResult) throws Throwable {
+  protected static void invokeConfigurable(
+      final Object instance,
+      final Object[] parameters,
+      final IConfigurable configurableInstance,
+      final Method thisMethod,
+      final ITestResult testResult)
+      throws Throwable {
     final Throwable[] error = new Throwable[1];
 
-    IConfigureCallBack callback = new IConfigureCallBack() {
-      @Override
-      public void runConfigurationMethod(ITestResult tr) {
-        try {
-          invokeMethod(thisMethod, instance, parameters);
-        } catch (Throwable t) {
-          error[0] = t;
-          tr.setThrowable(t); // make Throwable available to IConfigurable
-        }
-      }
+    IConfigureCallBack callback =
+        new IConfigureCallBack() {
+          @Override
+          public void runConfigurationMethod(ITestResult tr) {
+            try {
+              invokeMethod(thisMethod, instance, parameters);
+            } catch (Throwable t) {
+              error[0] = t;
+              tr.setThrowable(t); // make Throwable available to IConfigurable
+            }
+          }
 
-      @Override
-      public Object[] getParameters() {
-        return parameters;
-      }
-    };
+          @Override
+          public Object[] getParameters() {
+            return parameters;
+          }
+        };
     configurableInstance.run(callback, testResult);
     if (error[0] != null) {
       throw error[0];
     }
   }
-
 }

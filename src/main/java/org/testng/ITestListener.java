@@ -9,14 +9,15 @@ package org.testng;
  */
 public interface ITestListener extends ITestNGListener {
   /**
-   * Invoked each time before a test will be invoked.
-   * The <code>ITestResult</code> is only partially filled with the references to
-   * class, method, start millis and status.
+   * Invoked each time before a test will be invoked. The <code>ITestResult</code> is only partially
+   * filled with the references to class, method, start millis and status.
    *
    * @param result the partially filled <code>ITestResult</code>
    * @see ITestResult#STARTED
    */
-  void onTestStart(ITestResult result);
+  default void onTestStart(ITestResult result) {
+    // not implemented
+  }
 
   /**
    * Invoked each time a test succeeds.
@@ -24,7 +25,9 @@ public interface ITestListener extends ITestNGListener {
    * @param result <code>ITestResult</code> containing information about the run test
    * @see ITestResult#SUCCESS
    */
-  public void onTestSuccess(ITestResult result);
+  default void onTestSuccess(ITestResult result) {
+    // not implemented
+  }
 
   /**
    * Invoked each time a test fails.
@@ -32,7 +35,9 @@ public interface ITestListener extends ITestNGListener {
    * @param result <code>ITestResult</code> containing information about the run test
    * @see ITestResult#FAILURE
    */
-  public void onTestFailure(ITestResult result);
+  default void onTestFailure(ITestResult result) {
+    // not implemented
+  }
 
   /**
    * Invoked each time a test is skipped.
@@ -40,28 +45,28 @@ public interface ITestListener extends ITestNGListener {
    * @param result <code>ITestResult</code> containing information about the run test
    * @see ITestResult#SKIP
    */
-  public void onTestSkipped(ITestResult result);
+  default void onTestSkipped(ITestResult result) {
+    // not implemented
+  }
 
   /**
-   * Invoked each time a method fails but has been annotated with
-   * successPercentage and this failure still keeps it within the
-   * success percentage requested.
+   * Invoked each time a method fails but has been annotated with successPercentage and this failure
+   * still keeps it within the success percentage requested.
    *
    * @param result <code>ITestResult</code> containing information about the run test
    * @see ITestResult#SUCCESS_PERCENTAGE_FAILURE
    */
-  public void onTestFailedButWithinSuccessPercentage(ITestResult result);
+  default void onTestFailedButWithinSuccessPercentage(ITestResult result) {
+    // not implemented
+  }
 
-  /**
-   * Invoked after the test class is instantiated and before
-   * any configuration method is called.
-   */
-  public void onStart(ITestContext context);
+  /** Invoked after the test class is instantiated and before any configuration method is called. */
+  default void onStart(ITestContext context) {
+    // not implemented
+  }
 
-  /**
-   * Invoked after all the tests have run and all their
-   * Configuration methods have been called.
-   */
-  public void onFinish(ITestContext context);
-
+  /** Invoked after all the tests have run and all their Configuration methods have been called. */
+  default void onFinish(ITestContext context) {
+    // not implemented
+  }
 }

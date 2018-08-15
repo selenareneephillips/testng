@@ -1,159 +1,80 @@
 package org.testng.internal;
 
-import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import org.testng.collections.ListMultiMap;
+
+import org.testng.IExecutionVisualiser;
 import org.testng.collections.Lists;
 import org.testng.collections.Maps;
 import org.testng.collections.Sets;
-import org.testng.internal.collections.Pair;
 
-/**
- * Representation of the graph of methods.
- */
+/** Representation of the graph of methods. */
 public class DynamicGraph<T> {
 
-  private final Collection<T> m_nodesReady;
-  private final Collection<T> m_nodesRunning;
-  private final Collection<T> m_nodesFinished;
-
-  private final ListMultiMap<T, Edge<T>> m_edges = Maps.newListMultiMap();
-  private final ListMultiMap<T, Edge<T>> m_allEdges = Maps.newListMultiMap();
+  private final Set<T> m_nodesReady = Sets.newLinkedHashSet();
+  private final Set<T> m_nodesRunning = Sets.newLinkedHashSet();
+  private final Set<T> m_nodesFinished = Sets.newLinkedHashSet();
+  private final Edges<T> m_edges = new Edges<>();
+  private Set<IExecutionVisualiser> visualisers = Sets.newHashSet();
 
   public enum Status {
-    READY, RUNNING, FINISHED
+    READY,
+    RUNNING,
+    FINISHED
   }
 
-  static class Edge<T> {
-    private final T from;
-    private final T to;
-    private final int weight;
-
-    private Edge(int weight, T from, T to) {
-      this.from = from;
-      this.to = to;
-      this.weight = weight;
-    }
-
-    T getFrom() {
-      return from;
-    }
-
-    T getTo() {
-      return to;
-    }
-  }
-
-  public DynamicGraph() {
-      m_nodesFinished = Sets.newLinkedHashSet();
-      m_nodesReady = Sets.newLinkedHashSet();
-      m_nodesRunning = Sets.newLinkedHashSet();
-  }
-
-  /**
-   * Add a node to the graph.
-   */
+  /** Add a node to the graph. */
   public boolean addNode(T node) {
     return m_nodesReady.add(node);
   }
 
   /**
-   *
-   * @param weight - Represents one of {@link org.testng.TestRunner.PriorityWeight} ordinals indicating
-   *               the weightage of a particular node in the graph
+   * @param weight - Represents one of {@link org.testng.TestRunner.PriorityWeight} ordinals
+   *     indicating the weightage of a particular node in the graph
    * @param from - Represents the edge that depends on another edge.
    * @param to - Represents the edge on which another edge depends upon.
    */
   public void addEdge(int weight, T from, T to) {
-    addEdges(Collections.singletonList(new Edge<>(weight, from, to)));
+    m_edges.addEdge(weight, from, to, false);
   }
 
-  /**
-   * Add an edge between two nodes.
-   */
-  public void addEdge(int weight, T from, T... tos) {
-    addEdge(weight, from, Arrays.asList(tos));
+  public void setVisualisers(Set<IExecutionVisualiser> listener) {
+    visualisers = listener;
   }
 
-  /**
-   * Add an edge between two nodes.
-   */
-  public void addEdge(int weight, T from, Iterable<T> tos) {
-    List<Edge<T>> edges = Lists.newArrayList();
+  /** Add an edge between two nodes. */
+  public void addEdges(int weight, T from, Iterable<T> tos) {
     for (T to : tos) {
-      edges.add(new Edge<>(weight, from, to));
-    }
-    addEdges(edges);
-  }
-
-  private void addEdges(List<Edge<T>> edges) {
-    for (Edge<T> edge : edges) {
-      Edge<T> existingEdge = getNode(m_edges, edge);
-      if (existingEdge != null && existingEdge.weight == edge.weight) {
-        throw new IllegalStateException("Circular dependency: " + edge.from + " <-> " + edge.to);
-      }
-      if ((existingEdge == null) || (existingEdge.weight < edge.weight)) {
-        m_edges.put(edge.from, edge);
-      }
-      // else: existingEdge.weight > edge.weight and ignore
-      m_allEdges.put(edge.from, edge);
+      addEdge(weight, from, to);
     }
   }
 
-  private static <T> Edge<T> getNode(ListMultiMap<T, Edge<T>> edges, Edge<T> edge) {
-    for (Edge<T> e : edges.get(edge.to)) {
-      if (e.to.equals(edge.from)) {
-        return e;
-      }
-    }
-    return null;
-  }
-
-  /**
-   * @return a set of all the nodes that don't depend on any other nodes.
-   */
+  /** @return a set of all the nodes that don't depend on any other nodes. */
   public List<T> getFreeNodes() {
-    List<T> result = Lists.newArrayList();
-    for (T node : m_nodesReady) {
-      // A node is free if...
-      // - no other nodes depend on it
-      if (m_edges.get(node).isEmpty() || getUnfinishedNodes(node).isEmpty()) {
-        result.add(node);
-      }
-    }
-    // if all nodes have dependencies, then we can ignore the lowest one
-    if (result.isEmpty()) {
-      int lowestPriority = getLowestEdgePriority(m_nodesReady);
+    // Get a list of nodes that are ready and have no outgoing edges.
+    Set<T> free = Sets.newLinkedHashSet(m_nodesReady);
+    free.removeAll(m_edges.fromNodes());
+
+    // if all nodes have dependencies, then we can ignore the lowest one if nothing else is running
+    if (free.isEmpty() && m_nodesRunning.isEmpty()) {
+      int lowestWeight = m_edges.getLowestEdgeWeight(m_nodesReady);
       for (T node : m_nodesReady) {
-        // if a node has a dependency on a running node,
-        // then we can expect to have a free node when the node will finish
-        for (T unode : getUnfinishedNodes(node)) {
-          if (m_nodesRunning.contains(unode)) {
-            return Collections.emptyList();
-          }
-        }
-        List<Edge<T>> edges = m_edges.get(node);
-        if (hasAllEdgesWithLevel(edges, lowestPriority)) {
-          result.add(node);
+        if (m_edges.hasAllEdgesWithWeight(node, lowestWeight)) {
+          free.add(node);
         }
       }
     }
 
     // Filter result: remove node if the result contains all nodes from an edge
     List<T> finalResult = Lists.newArrayList();
-    for (T node : result) {
-      List<Edge<T>> edges = m_edges.get(node);
-      boolean canAdd = true;
-      for (Edge<T> edge : edges) {
-        if (result.contains(edge.to)) {
-          canAdd = false;
-        }
-      }
-      if (canAdd) {
+    for (T node : free) {
+      Map<T, Integer> edges = m_edges.from(node);
+      // disjoint returns true if the two collections have no common items.
+      if (edges == null || Collections.disjoint(edges.keySet(), free)) {
         finalResult.add(node);
       }
     }
@@ -161,59 +82,24 @@ public class DynamicGraph<T> {
     return finalResult;
   }
 
-  private int getLowestEdgePriority(Collection<T> nodes) {
-    if (nodes.isEmpty()) {
-      return 0;
+  public List<T> getDependenciesFor(T node) {
+    Map<T, Integer> data = m_edges.to(node);
+    if (data == null) {
+      return Lists.newArrayList();
     }
-    Integer lowerPriority = null;
-    for (T node : nodes) {
-      for (Edge<T> edge : m_edges.get(node)) {
-        if (lowerPriority == null) {
-          lowerPriority = edge.weight;
-        } else {
-          lowerPriority = lowerPriority < edge.weight ? lowerPriority : edge.weight;
-        }
-      }
-    }
-    return lowerPriority == null ? 0 : lowerPriority;
+    return Lists.newArrayList(data.keySet());
   }
 
-  private static <T> boolean hasAllEdgesWithLevel(List<Edge<T>> edges, int level) {
-    for (Edge<?> edge : edges) {
-      if (edge.weight != level) {
-        return false;
-      }
-    }
-    return true;
-  }
-
-  /**
-   * @return a list of all the nodes that have a status other than FINISHED.
-   */
-  private Collection<? extends T> getUnfinishedNodes(T node) {
-    Set<T> result = Sets.newHashSet();
-    for (Edge<T> edge : m_edges.get(node)) {
-      if (m_nodesReady.contains(edge.to) || m_nodesRunning.contains(edge.to)) {
-        result.add(edge.to);
-      }
-    }
-    return result;
-  }
-
-  /**
-   * Set the status for a set of nodes.
-   */
+  /** Set the status for a set of nodes. */
   public void setStatus(Collection<T> nodes, Status status) {
     for (T n : nodes) {
       setStatus(n, status);
     }
   }
 
-  /**
-   * Set the status for a node.
-   */
+  /** Set the status for a node. */
   public void setStatus(T node, Status status) {
-    switch(status) {
+    switch (status) {
       case RUNNING:
         m_nodesReady.remove(node);
         m_nodesRunning.add(node);
@@ -223,86 +109,83 @@ public class DynamicGraph<T> {
         m_nodesRunning.remove(node);
         m_nodesFinished.add(node);
 
-        m_edges.removeAll(node);
-        List<Pair<T, Edge<T>>> edgesToRemove = Lists.newArrayList();
-        for (Map.Entry<T, List<Edge<T>>> entry : m_edges.entrySet()) {
-          for (Edge<T> edge : entry.getValue()) {
-            if (edge.to.equals(node)) {
-              edgesToRemove.add(new Pair<>(entry.getKey(), edge));
-            }
-          }
-        }
-        for (Pair<T, Edge<T>> pair : edgesToRemove) {
-          // Add virtual edge before removing intermediate node:
-          // ie: if a -> b and b -> c, then a -> c is added before the b deletion
-          for (Edge<T> edge : m_allEdges.get(node)) {
-            // If the edge doesn't exist yet
-            Edge<T> pedge = pair.second();
-            Edge<T> existingEdge = getNode(m_edges, new Edge<>(0, pedge.from, edge.to));
-            if ((existingEdge == null || existingEdge.weight > pedge.weight) &&
-                // Then we filter useless edge creation: the "to" must have to run later and,
-                // "from"/"to" must not be the same node
-                m_nodesReady.contains(edge.to) && !pedge.from.equals(edge.to)) {
-
-              if (edge.weight > pedge.weight) {
-                addEdge(edge.weight, pedge.from, edge.to);
-              } else {
-                addEdge(pedge.weight, pedge.from, edge.to);
+        Map<T, Integer> outgoingEdges = m_edges.from(node);
+        Map<T, Integer> incomingEdges = m_edges.to(node);
+        if (outgoingEdges != null && incomingEdges != null) {
+          // Add virtual edge before removing intermediate node. E.g.:
+          //   Given graph c -> b -> a, then add c -> a before removing b.
+          for (Map.Entry<T, Integer> out : outgoingEdges.entrySet()) {
+            for (Map.Entry<T, Integer> in : incomingEdges.entrySet()) {
+              if (in.getKey() == out.getKey()) {
+                // Don't create a one node cycle.
+                continue;
+              } else if (in.getValue() > out.getValue()) {
+                // Don't add edges if we're patching up a lower weighted cycle.
+                continue;
               }
+
+              int weight = Math.max(in.getValue(), out.getValue());
+              m_edges.addEdge(weight, in.getKey(), out.getKey(), true);
             }
           }
-          m_edges.remove(pair.first(), pair.second());
         }
+
+        m_edges.removeNode(node);
+        break;
+      case READY:
+        m_nodesReady.add(node);
+        m_nodesRunning.remove(node);
         break;
       default:
         throw new IllegalArgumentException("Unsupported status: " + status);
     }
+
+    this.visualisers.forEach(visualiser -> visualiser.consumeDotDefinition(toDot()));
   }
 
-  /**
-   * @return the number of nodes in this graph.
-   */
+  /** @return the number of nodes in this graph. */
   public int getNodeCount() {
-    int result = m_nodesReady.size() + m_nodesRunning.size() + m_nodesFinished.size();
-    return result;
+    return m_nodesReady.size() + m_nodesRunning.size() + m_nodesFinished.size();
   }
 
   public int getNodeCountWithStatus(Status status) {
-    switch(status) {
-      case READY: return m_nodesReady.size();
-      case RUNNING: return m_nodesRunning.size();
-      case FINISHED: return m_nodesFinished.size();
-      default: throw new IllegalArgumentException();
+    return getNodesWithStatus(status).size();
+  }
+
+  public Set<T> getNodesWithStatus(Status status) {
+    switch (status) {
+      case READY:
+        return m_nodesReady;
+      case RUNNING:
+        return m_nodesRunning;
+      case FINISHED:
+        return m_nodesFinished;
+      default:
+        throw new IllegalArgumentException();
     }
   }
 
   @Override
   public String toString() {
-    StringBuilder result = new StringBuilder("[DynamicGraph ");
-    result.append("\n  Ready:" + m_nodesReady);
-    result.append("\n  Running:" + m_nodesRunning);
-    result.append("\n  Finished:" + m_nodesFinished);
-    result.append("\n  Edges:\n");
-    for (Map.Entry<T, List<Edge<T>>> es : m_edges.entrySet()) {
-      result.append("     " + es.getKey() + "\n");
-      for (Edge<T> t : es.getValue()) {
-        result.append("        " + t.to + "\n");
-      }
-    }
-    result.append("]");
-    return result.toString();
+    return "[DynamicGraph "
+        + "\n  Ready:"
+        + m_nodesReady
+        + "\n  Running:"
+        + m_nodesRunning
+        + "\n  Finished:"
+        + m_nodesFinished
+        + "\n  Edges:\n"
+        + m_edges
+        + "]";
   }
 
-  private String getName(T t) {
+  private static <T> String dotShortName(T t) {
     String s = t.toString();
-    int n1 = s.lastIndexOf('.') + 1;
     int n2 = s.indexOf('(');
-    return s.substring(n1, n2);
+    return s.substring(0, n2).replaceAll("\\Q.\\E", "_");
   }
 
-  /**
-   * @return a .dot file (GraphViz) version of this graph.
-   */
+  /** @return a .dot file (GraphViz) version of this graph. */
   public String toDot() {
     String FREE = "[style=filled color=yellow]";
     String RUNNING = "[style=filled color=green]";
@@ -312,29 +195,219 @@ public class DynamicGraph<T> {
     String color;
     for (T n : m_nodesReady) {
       color = freeNodes.contains(n) ? FREE : "";
-      result.append("  " + getName(n) + color + "\n");
+      result.append("  ").append(dotShortName(n)).append(color).append("\n");
     }
     for (T n : m_nodesRunning) {
       color = freeNodes.contains(n) ? FREE : RUNNING;
-      result.append("  " + getName(n) + color + "\n");
+      result.append("  ").append(dotShortName(n)).append(color).append("\n");
     }
     for (T n : m_nodesFinished) {
-      result.append("  " + getName(n) + FINISHED+ "\n");
+      result.append("  ").append(dotShortName(n)).append(FINISHED).append("\n");
     }
-    result.append("\n");
 
-    for (List<Edge<T>> edges : m_edges.values()) {
-      for (Edge<T> edge : edges) {
-        String dotted = m_nodesFinished.contains(edge.from) ? "style=dotted" : "";
-        result.append("  " + getName(edge.from) + " -> " + getName(edge.to) + " [dir=back " + dotted + "]\n");
-      }
-    }
+    m_edges.appendDotEdges(result, m_nodesFinished);
     result.append("}\n");
 
     return result.toString();
   }
 
-  public ListMultiMap<T, Edge<T>> getEdges() {
-    return m_edges;
+  /** For tests only */
+  Map<T, Map<T, Integer>> getEdges() {
+    return m_edges.getEdges();
+  }
+
+  /** Manage edges and weights between nodes. */
+  private static class Edges<T> {
+    // Maps of edges in the graph organized by incoming or outgoing edges. The integer is the weight
+    // of the edge. It's
+    // important that these maps always stay consistent with each other. All modifications should go
+    // through addEdge
+    // and removeNode.
+    private final Map<T, Map<T, Integer>> m_incomingEdges = new HashMap<>();
+    private final Map<T, Map<T, Integer>> m_outgoingEdges = new HashMap<>();
+
+    public void addEdge(int weight, T from, T to, boolean ignoreCycles) {
+      if (from.equals(to)) {
+        return;
+      }
+
+      Integer reversedEdgeWeight = findReversedEdge(from, to);
+      if (reversedEdgeWeight != null && reversedEdgeWeight == weight) {
+        if (!ignoreCycles) {
+          throw new IllegalStateException("Circular dependency: " + from + " <-> " + to);
+        } else {
+          return;
+        }
+      }
+
+      addEdgeToMap(m_incomingEdges, to, from, weight);
+      addEdgeToMap(m_outgoingEdges, from, to, weight);
+    }
+
+    /** @return the set of nodes that have outgoing edges. */
+    Set<T> fromNodes() {
+      return m_outgoingEdges.keySet();
+    }
+
+    Map<T, Integer> from(T node) {
+      Map<T, Integer> edges = m_outgoingEdges.get(node);
+      return edges == null ? null : Collections.unmodifiableMap(edges);
+    }
+
+    Map<T, Integer> to(T node) {
+      Map<T, Integer> edges = m_incomingEdges.get(node);
+      return edges == null ? null : Collections.unmodifiableMap(edges);
+    }
+
+    /**
+     * Return the weight of the edge in the graph that is the reversed direction of edge. For
+     * example, if edge a -> b exists, and edge b -> a is passed in, then return a -> b.
+     *
+     * @param from - the from edge
+     * @param to - the to edge
+     * @return the weight of the reversed edge or null if edge does not exist
+     */
+    private Integer findReversedEdge(T from, T to) {
+      Map<T, Integer> edges = m_outgoingEdges.get(to);
+      return edges == null ? null : edges.get(from);
+    }
+
+    /**
+     * Remove a node from the graph and all associated edges. Each edge needs to be removed from
+     * both maps to keep the maps in sync.
+     *
+     * @param node Node to remove.
+     */
+    void removeNode(T node) {
+      Map<T, Integer> outgoingEdges = m_outgoingEdges.remove(node);
+      if (outgoingEdges != null) {
+        removeEdgesFromMap(m_incomingEdges, outgoingEdges.keySet(), node);
+      }
+
+      Map<T, Integer> incomingEdges = m_incomingEdges.remove(node);
+      if (incomingEdges != null) {
+        removeEdgesFromMap(m_outgoingEdges, incomingEdges.keySet(), node);
+      }
+    }
+
+    int getLowestEdgeWeight(Set<T> nodes) {
+      if (nodes.isEmpty()) {
+        return 0;
+      }
+
+      Set<T> intersection = Sets.newHashSet(nodes);
+      intersection.retainAll(m_outgoingEdges.keySet());
+      if (intersection.isEmpty()) {
+        return 0;
+      }
+
+      int lowestWeight = Integer.MAX_VALUE;
+      for (T node : intersection) {
+        Map<T, Integer> weightMap = m_outgoingEdges.get(node);
+
+        // Not catching NoSuchElementException, because that would indicate our graph is corrupt.
+        lowestWeight = Math.min(lowestWeight, Collections.min(weightMap.values()));
+      }
+      return lowestWeight;
+    }
+
+    boolean hasAllEdgesWithWeight(T node, int level) {
+      Map<T, Integer> weights = m_outgoingEdges.get(node);
+      if (weights == null) {
+        return true;
+      }
+
+      for (int weight : weights.values()) {
+        if (weight != level) {
+          return false;
+        }
+      }
+      return true;
+    }
+
+    /**
+     * Remove edges from a map given a node and a list of destination nodes. Given:
+     *
+     * <pre>{@code
+     * m_outgoingEdges:
+     *    a -> b
+     *         c
+     *         d
+     * m_incomingEdges:
+     *    b -> a
+     *    c -> a
+     *    d -> a
+     *
+     * }</pre>
+     *
+     * Then, calling this method to remove node c on both maps as done in removeNode(), would result
+     * in a -> c and c -> a edges being removed.
+     */
+    private static <T> void removeEdgesFromMap(
+        Map<T, Map<T, Integer>> map, Collection<T> nodes, T node) {
+      for (T k : nodes) {
+        Map<T, Integer> edges = map.get(k);
+
+        if (edges == null) {
+          throw new IllegalStateException("Edge not found in map.");
+        }
+
+        edges.remove(node);
+        if (edges.isEmpty()) {
+          map.remove(k);
+        }
+      }
+    }
+
+    private static <T> void addEdgeToMap(Map<T, Map<T, Integer>> map, T n1, T n2, int weight) {
+      Map<T, Integer> edges = map.computeIfAbsent(n1, k -> new HashMap<>());
+
+      Integer existingWeight = edges.get(n2);
+      edges.put(n2, Math.max(weight, existingWeight != null ? existingWeight : Integer.MIN_VALUE));
+    }
+
+    /**
+     * Allow raw access to the edges, but protect inside unmodifiableMaps. This is for tests,
+     * toString and toDot.
+     */
+    Map<T, Map<T, Integer>> getEdges() {
+      Map<T, Map<T, Integer>> edges = Maps.newHashMap();
+      for (Map.Entry<T, Map<T, Integer>> es : m_outgoingEdges.entrySet()) {
+        edges.put(es.getKey(), Collections.unmodifiableMap(es.getValue()));
+      }
+      return Collections.unmodifiableMap(edges);
+    }
+
+    @Override
+    public String toString() {
+      StringBuilder sb = new StringBuilder();
+      for (Map.Entry<T, Map<T, Integer>> es : m_outgoingEdges.entrySet()) {
+        sb.append("     ").append(es.getKey()).append("\n");
+        for (Map.Entry<T, Integer> to : es.getValue().entrySet()) {
+          sb.append("        (")
+              .append(to.getValue())
+              .append(") ")
+              .append(to.getKey())
+              .append("\n");
+        }
+      }
+      return sb.toString();
+    }
+
+    void appendDotEdges(StringBuilder sb, Set<T> finished) {
+      for (Map.Entry<T, Map<T, Integer>> es : m_outgoingEdges.entrySet()) {
+        T from = es.getKey();
+        for (T to : es.getValue().keySet()) {
+          String dotted = finished.contains(from) ? "style=dotted" : "";
+          sb.append("  ")
+              .append(dotShortName(from))
+              .append(" -> ")
+              .append(dotShortName(to))
+              .append(" [dir=back ")
+              .append(dotted)
+              .append("]\n");
+        }
+      }
+    }
   }
 }

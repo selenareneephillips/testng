@@ -3,33 +3,32 @@ package test;
 import com.google.common.base.Joiner;
 import org.testng.IInvokedMethod;
 import org.testng.IInvokedMethodListener;
-import org.testng.ITestContext;
 import org.testng.ITestListener;
 import org.testng.ITestResult;
+import org.testng.ITestContext;
+import org.testng.Reporter;
 import org.testng.collections.Lists;
-import org.testng.collections.Maps;
-import org.testng.collections.Sets;
 
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 
 // TODO replace other test IInvokedMethodListener by this one
 public class InvokedMethodNameListener implements IInvokedMethodListener, ITestListener {
 
-  private final Set<Object> testInstances = Sets.newHashSet();
-  private final List<String> foundMethodNames = new ArrayList<>();
-  private final List<String> invokedMethodNames = new ArrayList<>();
-  private final List<String> failedMethodNames = new ArrayList<>();
-  private final List<String> failedBeforeInvocationMethodNames = new ArrayList<>();
-  private final List<String> skippedMethodNames = new ArrayList<>();
-  private final List<String> skippedAfterInvocationMethodNames = new ArrayList<>();
-  private final List<String> succeedMethodNames = new ArrayList<>();
-  private final Map<String, ITestResult> results = new HashMap<>();
-  private final Map<Class<?>, List<String>> mapping = Maps.newHashMap();
+  private final Set<Object> testInstances = ConcurrentHashMap.newKeySet();
+  private final List<String> foundMethodNames = Collections.synchronizedList(new ArrayList<>());
+  private final List<String> invokedMethodNames = Collections.synchronizedList(new ArrayList<>());
+  private final List<String> failedMethodNames = Collections.synchronizedList(new ArrayList<>());
+  private final List<String> failedBeforeInvocationMethodNames = Collections.synchronizedList(new ArrayList<>());
+  private final List<String> skippedMethodNames = Collections.synchronizedList(new ArrayList<>());
+  private final List<String> skippedAfterInvocationMethodNames = Collections.synchronizedList(new ArrayList<>());
+  private final List<String> succeedMethodNames = Collections.synchronizedList(new ArrayList<>());
+  private final Map<String, ITestResult> results = new ConcurrentHashMap<>();
+  private final Map<Class<?>, List<String>> mapping = new ConcurrentHashMap<>();
   private final boolean skipConfiguration;
   private final boolean wantSkippedMethodAfterInvocation;
 
@@ -56,11 +55,7 @@ public class InvokedMethodNameListener implements IInvokedMethodListener, ITestL
 
   @Override
   public void afterInvocation(IInvokedMethod method, ITestResult testResult) {
-    List<String> methodNames = mapping.get(testResult.getMethod().getRealClass());
-    if (methodNames == null) {
-      methodNames = Lists.newArrayList();
-      mapping.put(testResult.getMethod().getRealClass(), methodNames);
-    }
+    List<String> methodNames = mapping.computeIfAbsent(testResult.getMethod().getRealClass(), k -> Lists.newArrayList());
     methodNames.add(method.getTestMethod().getMethodName());
     String name = getName(testResult);
     switch (testResult.getStatus()) {
@@ -73,8 +68,6 @@ public class InvokedMethodNameListener implements IInvokedMethodListener, ITestL
         if (!(skipConfiguration && method.isConfigurationMethod())) {
           if (wantSkippedMethodAfterInvocation) {
             skippedAfterInvocationMethodNames.add(name);
-          } else {
-            throw new IllegalStateException("A skipped test is not supposed to be invoked");
           }
         }
         break;
@@ -202,5 +195,9 @@ public class InvokedMethodNameListener implements IInvokedMethodListener, ITestL
 
   public List<String> getMethodsForTestClass(Class<?> testClass) {
     return mapping.get(testClass);
+  }
+
+  public List<String> getLogs(String name) {
+    return Reporter.getOutput(getResult(name));
   }
 }

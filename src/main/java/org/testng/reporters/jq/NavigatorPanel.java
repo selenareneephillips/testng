@@ -7,9 +7,9 @@ import org.testng.ITestResult;
 import org.testng.collections.Lists;
 import org.testng.reporters.XMLStringBuffer;
 
-import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Predicate;
 
 public class NavigatorPanel extends BasePanel {
 
@@ -56,11 +56,12 @@ public class NavigatorPanel extends BasePanel {
       // Extra div so the highlighting logic will only highlight this line and not
       // the entire container
       header.push(D, C, "suite-header light-rounded-window-top");
-      header.push("a", "href", "#",
-          "panel-name", suiteName,
-          C, "navigator-link");
-      header.addOptional(S, suite.getName(),
-          C, "suite-name border-" + getModel().getStatusForSuite(suite.getName()));
+      header.push("a", "href", "#", "panel-name", suiteName, C, "navigator-link");
+      header.addOptional(
+          S,
+          suite.getName(),
+          C,
+          "suite-name border-" + getModel().getStatusForSuite(suite.getName()));
       header.pop("a");
       header.pop(D);
 
@@ -84,8 +85,8 @@ public class NavigatorPanel extends BasePanel {
     main.pop(D);
   }
 
-  private void generateResult(XMLStringBuffer header, int failed, int skipped, int passed,
-      ISuite suite, String suiteName) {
+  private void generateResult(
+      XMLStringBuffer header, int failed, int skipped, int passed, ISuite suite, String suiteName) {
     //
     // Results
     //
@@ -97,24 +98,32 @@ public class NavigatorPanel extends BasePanel {
 
     // Method stats
     int total = failed + skipped + passed;
-    String stats = String.format("%s, %s %s %s",
-        pluralize(total, "method"),
-        maybe(failed, "failed", ", "),
-        maybe(skipped, "skipped", ", "),
-        maybe(passed, "passed", ""));
+    String stats =
+        String.format(
+            "%s, %s %s %s",
+            pluralize(total, "method"),
+            maybe(failed, "failed", ", "),
+            maybe(skipped, "skipped", ", "),
+            maybe(passed, "passed", ""));
     header.push(D, C, "suite-section-content");
     header.push("ul");
     header.push("li");
     header.addOptional(S, stats, C, "method-stats");
     header.pop("li");
 
-    generateMethodList("Failed methods", new ResultsByStatus(suite, "failed", ITestResult.FAILURE),
-        suiteName, header);
-    generateMethodList("Skipped methods", new ResultsByStatus(suite, "skipped", ITestResult.SKIP),
-        suiteName, header);
-    generateMethodList("Passed methods", new ResultsByStatus(suite, "passed", ITestResult.SUCCESS),
-        suiteName, header);
-    }
+    generateMethodList(
+        "Failed methods",
+        new ResultsByStatus(suite, "failed", ITestResult.FAILURE),
+        suiteName,
+        header);
+    Predicate<ITestResult> skip = result -> !result.wasRetried();
+    IResultProvider provider = new ResultsByStatus(suite, "skipped", ITestResult.SKIP, skip);
+    generateMethodList("Skipped methods", provider, suiteName, header);
+    provider = new ResultsByStatus(suite, "skipped", ITestResult.SKIP, ITestResult::wasRetried);
+    generateMethodList("Retried methods", provider, suiteName, header);
+    provider = new ResultsByStatus(suite, "passed", ITestResult.SUCCESS);
+    generateMethodList("Passed methods", provider, suiteName, header);
+  }
 
   private void generateInfo(XMLStringBuffer header, ISuite suite) {
     //
@@ -140,9 +149,7 @@ public class NavigatorPanel extends BasePanel {
   private void addLinkTo(XMLStringBuffer header, INavigatorPanel panel, ISuite suite) {
     String text = panel.getNavigatorLink(suite);
     header.push("li");
-    header.push("a", "href", "#",
-        "panel-name", panel.getPanelName(suite),
-        C, "navigator-link ");
+    header.push("a", "href", "#", "panel-name", panel.getPanelName(suite), C, "navigator-link ");
     String className = panel.getClassName();
     if (className != null) {
       header.addOptional(S, text, C, className);
@@ -154,30 +161,33 @@ public class NavigatorPanel extends BasePanel {
   }
 
   private static String maybe(int count, String s, String sep) {
-    return count > 0 ? count + " " + s + sep: "";
+    return count > 0 ? count + " " + s + sep : "";
   }
 
-  private List<ITestResult> getMethodsByStatus(ISuite suite, int status) {
+  private List<ITestResult> getMethodsByStatus(
+      ISuite suite, int status, Predicate<ITestResult> condition) {
     List<ITestResult> result = Lists.newArrayList();
     List<ITestResult> testResults = getModel().getTestResults(suite);
     for (ITestResult tr : testResults) {
-      if (tr.getStatus() == status) {
+      if (tr.getStatus() == status && condition.test(tr)) {
         result.add(tr);
       }
     }
-    Collections.sort(result, ResultsByClass.METHOD_NAME_COMPARATOR);
+    result.sort(ResultsByClass.METHOD_NAME_COMPARATOR);
 
     return result;
   }
 
-  private static interface IResultProvider {
+  private interface IResultProvider {
     List<ITestResult> getResults();
+
     String getType();
   }
 
   private abstract static class BaseResultProvider implements IResultProvider {
     protected ISuite m_suite;
     protected String m_type;
+
     public BaseResultProvider(ISuite suite, String type) {
       m_suite = suite;
       m_type = type;
@@ -191,20 +201,27 @@ public class NavigatorPanel extends BasePanel {
 
   private class ResultsByStatus extends BaseResultProvider {
     private final int m_status;
+    private final Predicate<ITestResult> condition;
 
     public ResultsByStatus(ISuite suite, String type, int status) {
+      this(suite, type, status, (result) -> true);
+    }
+
+    public ResultsByStatus(
+        ISuite suite, String type, int m_status, Predicate<ITestResult> condition) {
       super(suite, type);
-      m_status = status;
+      this.m_status = m_status;
+      this.condition = condition;
     }
 
     @Override
     public List<ITestResult> getResults() {
-      return getMethodsByStatus(m_suite, m_status);
+      return getMethodsByStatus(m_suite, m_status, condition);
     }
   }
 
-  private void generateMethodList(String name, IResultProvider provider,
-      String suiteName, XMLStringBuffer main) {
+  private void generateMethodList(
+      String name, IResultProvider provider, String suiteName, XMLStringBuffer main) {
     XMLStringBuffer xsb = new XMLStringBuffer(main.getCurrentIndent());
     String type = provider.getType();
     String image = Model.getImage(type);
@@ -216,10 +233,24 @@ public class NavigatorPanel extends BasePanel {
 
     // The mark up to show the (hide)/(show) links
     xsb.push(S, C, "show-or-hide-methods " + type);
-    xsb.addRequired("a", " (hide)", "href", "#", C, "hide-methods " + type + " " + suiteName,
-        "panel-name", suiteName);
-    xsb.addRequired("a", " (show)", "href", "#",C, "show-methods " + type + " " + suiteName,
-        "panel-name", suiteName);
+    xsb.addRequired(
+        "a",
+        " (hide)",
+        "href",
+        "#",
+        C,
+        "hide-methods " + type + " " + suiteName,
+        "panel-name",
+        suiteName);
+    xsb.addRequired(
+        "a",
+        " (show)",
+        "href",
+        "#",
+        C,
+        "show-methods " + type + " " + suiteName,
+        "panel-name",
+        suiteName);
     xsb.pop(S);
 
     // List of methods
@@ -227,16 +258,24 @@ public class NavigatorPanel extends BasePanel {
     int count = 0;
     List<ITestResult> testResults = provider.getResults();
     if (testResults != null) {
-      Collections.sort(testResults, ResultsByClass.METHOD_NAME_COMPARATOR);
+      testResults.sort(ResultsByClass.METHOD_NAME_COMPARATOR);
       for (ITestResult tr : testResults) {
         String testName = Model.getTestResultName(tr);
         xsb.push(S);
         xsb.addEmptyElement("img", "src", image, "width", "3%");
-        xsb.addRequired("a", testName, "href", "#",
-            "hash-for-method", getModel().getTag(tr),
-            "panel-name", suiteName,
-            "title", tr.getTestClass().getName(),
-            C, "method navigator-link");
+        xsb.addRequired(
+            "a",
+            testName,
+            "href",
+            "#",
+            "hash-for-method",
+            getModel().getTag(tr),
+            "panel-name",
+            suiteName,
+            "title",
+            tr.getTestClass().getName(),
+            C,
+            "method navigator-link");
         xsb.pop(S);
         xsb.addEmptyElement("br");
         count++;
@@ -249,5 +288,4 @@ public class NavigatorPanel extends BasePanel {
       main.addString(xsb.toXML());
     }
   }
-
 }

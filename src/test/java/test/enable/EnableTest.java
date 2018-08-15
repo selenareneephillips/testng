@@ -18,15 +18,43 @@ public class EnableTest extends SimpleBaseTest {
     tng.setPreserveOrder(true);
     tng.run();
 
-    assertThat(listener.getInvokedMethods()).containsExactly(
-        "beforeSuiteA", "beforeSuiteA2", "beforeSuiteNoRunA", "beforeSuiteNoRunA2", "beforeSuiteRunA", "beforeSuiteRunA2",
-        "beforeSuiteRunB", "beforeSuiteRunB2",
-        "beforeSuiteC", "beforeSuiteC2", "beforeSuiteNoRunC", "beforeSuiteNoRunC2", "beforeSuiteRunC", "beforeSuiteRunC2",
-        "testA2", "testA3", "testB2", "testB3", "testC", "testC2", "testC3",
-        "afterSuiteA", "afterSuiteA2", "afterSuiteNoRunA", "afterSuiteNoRunA2", "afterSuiteRunA", "afterSuiteRunA2",
-        "afterSuiteRunB", "afterSuiteRunB2",
-        "afterSuiteC", "afterSuiteC2", "afterSuiteNoRunC", "afterSuiteNoRunC2", "afterSuiteRunC", "afterSuiteRunC2"
-    );
+    assertThat(listener.getInvokedMethods())
+        .containsExactly(
+            "beforeSuiteA",
+            "beforeSuiteA2",
+            "beforeSuiteNoRunA",
+            "beforeSuiteNoRunA2",
+            "beforeSuiteRunA",
+            "beforeSuiteRunA2",
+            "beforeSuiteRunB",
+            "beforeSuiteRunB2",
+            "beforeSuiteC",
+            "beforeSuiteC2",
+            "beforeSuiteNoRunC",
+            "beforeSuiteNoRunC2",
+            "beforeSuiteRunC",
+            "beforeSuiteRunC2",
+            "testA2",
+            "testA3",
+            "testB2",
+            "testB3",
+            "testC",
+            "testC2",
+            "testC3",
+            "afterSuiteA",
+            "afterSuiteA2",
+            "afterSuiteNoRunA",
+            "afterSuiteNoRunA2",
+            "afterSuiteRunA",
+            "afterSuiteRunA2",
+            "afterSuiteRunB",
+            "afterSuiteRunB2",
+            "afterSuiteC",
+            "afterSuiteC2",
+            "afterSuiteNoRunC",
+            "afterSuiteNoRunC2",
+            "afterSuiteRunC",
+            "afterSuiteRunC2");
   }
 
   @Test(description = "https://github.com/cbeust/testng/issues/420")
@@ -36,10 +64,10 @@ public class EnableTest extends SimpleBaseTest {
     tng.addListener(listener);
     tng.run();
 
-    assertThat(listener.getInvokedMethods()).containsExactly(
-        "alwaysBeforeSuite", "beforeSuite",
-        "verifySomethingFirstSample", "verifySomethingSecondSample",
-        "afterSuite", "alwaysAfterSuite"
-    );
+    assertThat(listener.getInvokedMethods())
+        .containsExactly(
+            "alwaysBeforeSuite", "beforeSuite",
+            "verifySomethingFirstSample", "verifySomethingSecondSample",
+            "afterSuite", "alwaysAfterSuite");
   }
 }

@@ -14,7 +14,7 @@ public class ClassInfoMap {
   private final boolean includeNestedClasses;
 
   public ClassInfoMap() {
-    this(Collections.<XmlClass>emptyList(), false);
+    this(Collections.emptyList(), false);
   }
 
   public ClassInfoMap(List<XmlClass> classes) {
@@ -28,8 +28,13 @@ public class ClassInfoMap {
         Class<?> c = xmlClass.getSupportClass();
         registerClass(c, xmlClass);
       } catch (NoClassDefFoundError e) {
-        Utils.log("[ClassInfoMap]", 1, "Unable to open class " + xmlClass.getName()
-            + " - unable to resolve class reference " + e.getMessage());
+        Utils.log(
+            "[ClassInfoMap]",
+            1,
+            "Unable to open class "
+                + xmlClass.getName()
+                + " - unable to resolve class reference "
+                + e.getMessage());
         if (xmlClass.loadClasses()) {
           throw e;
         }

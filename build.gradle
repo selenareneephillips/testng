@@ -21,7 +21,6 @@ buildscript {
     dependencies {
         classpath "io.codearte.gradle.nexus:gradle-nexus-staging-plugin:0.5.3"
         classpath 'org.hibernate.build.gradle:version-injection-plugin:1.0.0'
-        classpath 'org.sonarsource.scanner.gradle:sonarqube-gradle-plugin:2.2.1'
     }
 }
 
@@ -31,6 +30,7 @@ plugins {
     id "com.jfrog.artifactory" version "4.4.10"
     id "nebula.optional-base" version "3.1.0"
     id "nebula.provided-base" version "3.1.0"
+    id "org.sonarqube" version "2.6.1"
 }
 
 buildScan {
@@ -44,11 +44,11 @@ buildScan {
 }
 
 task wrapper(type: Wrapper) {
-    gradleVersion = '3.0'
+    gradleVersion = '4.5.1'
 }
 
 group = 'org.testng'
-version = '6.14-SNAPSHOT'
+version = '7.0.0-SNAPSHOT'
 
 apply plugin: 'java'
 apply plugin: 'groovy'
@@ -57,8 +57,7 @@ apply plugin: 'osgi'
 apply plugin: 'version-injection'
 apply plugin: 'eclipse'
 
-targetCompatibility = "1.7"
-sourceCompatibility = "1.7"
+sourceCompatibility = "1.8"
 
 eclipse {
     classpath {
@@ -77,19 +76,21 @@ repositories {
 dependencies {
     compileOnly 'com.google.code.findbugs:jsr305:3.0.1'
 
-    compile 'org.apache-extras.beanshell:bsh:2.0b6'
-    compile 'com.beust:jcommander:1.66'
+    compile 'com.beust:jcommander:1.72'
 
-    compile 'org.apache.ant:ant:1.9.7'
+    compile 'org.apache.ant:ant:1.10.3', optional
     compile 'junit:junit:4.12', optional
-    compile 'org.yaml:snakeyaml:1.17', optional
+    compile 'org.yaml:snakeyaml:1.21', optional
 
     provided 'com.google.inject:guice:4.1.0:no_aop'
 
-    testCompile 'org.assertj:assertj-core:2.5.0'
+    testCompile 'org.assertj:assertj-core:3.10.0'
     testCompile 'org.codehaus.groovy:groovy-all:2.4.7'
     testCompile 'org.spockframework:spock-core:1.0-groovy-2.4'
+    testCompile 'org.apache-extras.beanshell:bsh:2.0b6'
     testCompile 'org.mockito:mockito-core:2.12.0'
+    testCompile 'org.jboss.shrinkwrap:shrinkwrap-api:1.2.6'
+    testCompile 'org.jboss.shrinkwrap:shrinkwrap-impl-base:1.2.6'
 }
 
 task sourceJar(type: Jar) {
@@ -139,50 +140,20 @@ test {
 
 allprojects {
     tasks.withType(Javadoc) {
-        if (JavaVersion.current().isJava8Compatible()) {
-            options.addStringOption('Xdoclint:none', '-quiet')
-        }
-        options.links("https://docs.oracle.com/javase/7/docs/api")
+        options.addStringOption('Xdoclint:none', '-quiet')
+        options.links("https://docs.oracle.com/javase/8/docs/api")
     }
 }
 
-if (JavaVersion.current().isJava8Compatible()) {
-    apply plugin: 'org.sonarqube'
-    sonarqube {
-        properties {
-            property "sonar.host.url", "https://sonarqube.com/"
-            property "sonar.github.repository", "cbeust/testng"
-            property "sonar.github.login", "testng-bot"
-        }
+apply plugin: 'org.sonarqube'
+sonarqube {
+    properties {
+        property "sonar.host.url", "https://sonarcloud.io/"
+        property "sonar.github.repository", "cbeust/testng"
+        property "sonar.github.login", "testng-bot"
     }
-
-    sourceSets {
-        test8 {
-            java {
-                srcDirs = ['src/test/java8']
-
-            }
-            resources {
-                srcDirs = ['src/test/resources']
-            }
-            compileClasspath += main.output + test.output
-            runtimeClasspath += main.output + test.output
-            sourceCompatibility = 1.8
-            targetCompatibility = 1.8
-
-        }
-    }
-
-    task testJava8(type: Test) {
-        testClassesDir = sourceSets.test8.output.classesDir
-        classpath += sourceSets.test8.runtimeClasspath
-
-        useTestNG() {
-            suites 'src/test/resources/testng-java8.xml'
-        }
-    }
-
-    test.finalizedBy testJava8
 }
+
 
 apply from: 'gradle/publishing.gradle'
+apply from: 'gradle/publishing-jcenter.gradle'

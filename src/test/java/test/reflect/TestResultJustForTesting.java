@@ -94,6 +94,21 @@ public class TestResultJustForTesting implements ITestResult {
   }
 
   @Override
+  public void setTestName(String name) {
+
+  }
+
+  @Override
+  public boolean wasRetried() {
+    return false;
+  }
+
+  @Override
+  public void setWasRetried(boolean wasRetried) {
+
+  }
+
+  @Override
   public String getInstanceName() {
     return null;
   }
