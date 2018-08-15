@@ -1,4 +1,4 @@
-package test.thread.parallelization;
+package test;
 
 import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.Multimap;

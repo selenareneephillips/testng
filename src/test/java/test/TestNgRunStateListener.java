@@ -1,7 +1,7 @@
-package test.thread.parallelization;
+package test;
 
-import test.thread.parallelization.TestNgRunStateTracker.EventLog;
-import test.thread.parallelization.TestNgRunStateTracker.TestNgRunEvent;
+import test.TestNgRunStateTracker.EventLog;
+import test.TestNgRunStateTracker.TestNgRunEvent;
 
 import org.testng.ISuite;
 import org.testng.ISuiteListener;
@@ -11,28 +11,28 @@ import org.testng.ITestResult;
 
 import java.util.concurrent.TimeUnit;
 
-import static test.thread.parallelization.TestNgRunStateTracker.EventInfo.CLASS_INSTANCE;
-import static test.thread.parallelization.TestNgRunStateTracker.EventInfo.CLASS_NAME;
-import static test.thread.parallelization.TestNgRunStateTracker.EventInfo.GROUPS_BELONGING_TO;
-import static test.thread.parallelization.TestNgRunStateTracker.EventInfo.GROUPS_DEPENDED_ON;
-import static test.thread.parallelization.TestNgRunStateTracker.EventInfo.METHODS_DEPENDED_ON;
-import static test.thread.parallelization.TestNgRunStateTracker.EventInfo.METHOD_NAME;
-import static test.thread.parallelization.TestNgRunStateTracker.EventInfo.SUITE_NAME;
-import static test.thread.parallelization.TestNgRunStateTracker.EventInfo.TEST_NAME;
+import static test.TestNgRunStateTracker.EventInfo.CLASS_INSTANCE;
+import static test.TestNgRunStateTracker.EventInfo.CLASS_NAME;
+import static test.TestNgRunStateTracker.EventInfo.GROUPS_BELONGING_TO;
+import static test.TestNgRunStateTracker.EventInfo.GROUPS_DEPENDED_ON;
+import static test.TestNgRunStateTracker.EventInfo.METHODS_DEPENDED_ON;
+import static test.TestNgRunStateTracker.EventInfo.METHOD_NAME;
+import static test.TestNgRunStateTracker.EventInfo.SUITE_NAME;
+import static test.TestNgRunStateTracker.EventInfo.TEST_NAME;
 
-import static test.thread.parallelization.TestNgRunStateTracker.TestNgRunEvent.LISTENER_SUITE_START;
-import static test.thread.parallelization.TestNgRunStateTracker.TestNgRunEvent.LISTENER_SUITE_FINISH;
+import static test.TestNgRunStateTracker.TestNgRunEvent.LISTENER_SUITE_START;
+import static test.TestNgRunStateTracker.TestNgRunEvent.LISTENER_SUITE_FINISH;
 
-import static test.thread.parallelization.TestNgRunStateTracker.TestNgRunEvent.LISTENER_TEST_START;
-import static test.thread.parallelization.TestNgRunStateTracker.TestNgRunEvent.LISTENER_TEST_FINISH;
+import static test.TestNgRunStateTracker.TestNgRunEvent.LISTENER_TEST_START;
+import static test.TestNgRunStateTracker.TestNgRunEvent.LISTENER_TEST_FINISH;
 
-import static test.thread.parallelization.TestNgRunStateTracker.TestNgRunEvent.LISTENER_TEST_METHOD_FAIL;
-import static test.thread.parallelization.TestNgRunStateTracker.TestNgRunEvent.LISTENER_TEST_METHOD_FAIL_PERCENTAGE;
-import static test.thread.parallelization.TestNgRunStateTracker.TestNgRunEvent.LISTENER_TEST_METHOD_SKIPPED;
-import static test.thread.parallelization.TestNgRunStateTracker.TestNgRunEvent.LISTENER_TEST_METHOD_START;
-import static test.thread.parallelization.TestNgRunStateTracker.TestNgRunEvent.LISTENER_TEST_METHOD_PASS;
+import static test.TestNgRunStateTracker.TestNgRunEvent.LISTENER_TEST_METHOD_FAIL;
+import static test.TestNgRunStateTracker.TestNgRunEvent.LISTENER_TEST_METHOD_FAIL_PERCENTAGE;
+import static test.TestNgRunStateTracker.TestNgRunEvent.LISTENER_TEST_METHOD_SKIPPED;
+import static test.TestNgRunStateTracker.TestNgRunEvent.LISTENER_TEST_METHOD_START;
+import static test.TestNgRunStateTracker.TestNgRunEvent.LISTENER_TEST_METHOD_PASS;
 
-import static test.thread.parallelization.TestNgRunStateTracker.logEvent;
+import static test.TestNgRunStateTracker.logEvent;
 
 public class TestNgRunStateListener implements ISuiteListener, ITestListener {
 

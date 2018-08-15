@@ -4,21 +4,21 @@ import org.testng.ITestContext;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Parameters;
 import org.testng.annotations.Test;
-import test.thread.parallelization.TestNgRunStateTracker;
+import test.TestNgRunStateTracker;
 
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
-import static test.thread.parallelization.TestNgRunStateTracker.EventInfo.CLASS_INSTANCE;
-import static test.thread.parallelization.TestNgRunStateTracker.EventInfo.CLASS_NAME;
-import static test.thread.parallelization.TestNgRunStateTracker.EventInfo.DATA_PROVIDER_PARAM;
-import static test.thread.parallelization.TestNgRunStateTracker.EventInfo.GROUPS_BELONGING_TO;
-import static test.thread.parallelization.TestNgRunStateTracker.EventInfo.GROUPS_DEPENDED_ON;
-import static test.thread.parallelization.TestNgRunStateTracker.EventInfo.METHODS_DEPENDED_ON;
-import static test.thread.parallelization.TestNgRunStateTracker.EventInfo.METHOD_NAME;
-import static test.thread.parallelization.TestNgRunStateTracker.EventInfo.SUITE_NAME;
-import static test.thread.parallelization.TestNgRunStateTracker.EventInfo.TEST_NAME;
-import static test.thread.parallelization.TestNgRunStateTracker.TestNgRunEvent.TEST_METHOD_EXECUTION;
+import static test.TestNgRunStateTracker.EventInfo.CLASS_INSTANCE;
+import static test.TestNgRunStateTracker.EventInfo.CLASS_NAME;
+import static test.TestNgRunStateTracker.EventInfo.DATA_PROVIDER_PARAM;
+import static test.TestNgRunStateTracker.EventInfo.GROUPS_BELONGING_TO;
+import static test.TestNgRunStateTracker.EventInfo.GROUPS_DEPENDED_ON;
+import static test.TestNgRunStateTracker.EventInfo.METHODS_DEPENDED_ON;
+import static test.TestNgRunStateTracker.EventInfo.METHOD_NAME;
+import static test.TestNgRunStateTracker.EventInfo.SUITE_NAME;
+import static test.TestNgRunStateTracker.EventInfo.TEST_NAME;
+import static test.TestNgRunStateTracker.TestNgRunEvent.TEST_METHOD_EXECUTION;
 
 public class TestClassFSixMethodsWithDataProviderOnSomeMethodsAndNoDepsSample {
 

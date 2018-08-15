@@ -14,6 +14,7 @@ import org.testng.internal.annotations.IAnnotationFinder;
 import org.testng.internal.annotations.JDK15AnnotationFinder;
 import org.testng.xml.Parser;
 import org.testng.xml.XmlClass;
+import org.testng.xml.XmlDefine;
 import org.testng.xml.XmlGroups;
 import org.testng.xml.XmlInclude;
 import org.testng.xml.XmlPackage;
@@ -267,6 +268,27 @@ public class SimpleBaseTest {
     XmlGroups xmlGroups = createGroupIncluding(includedGroupNames);
     test.setGroups(xmlGroups);
     return xmlGroups;
+  }
+
+  protected static XmlDefine createXmlDefine(String metaGroupName, String...includedGroupNames) {
+    XmlDefine xmlDefine = new XmlDefine();
+    xmlDefine.setName(metaGroupName);
+
+    for(String groupName : includedGroupNames) {
+      xmlDefine.onElement(groupName);
+    }
+
+    return xmlDefine;
+  }
+
+  protected static XmlRun createXmlRun(XmlDefine...xmlDefines) {
+    XmlRun xmlRun = new XmlRun();
+
+    for(XmlDefine xmlDefine : xmlDefines) {
+      xmlRun.onInclude(xmlDefine.getName());
+    }
+
+    return xmlRun;
   }
 
   private static XmlGroups createGroupIncluding(String...groupNames) {

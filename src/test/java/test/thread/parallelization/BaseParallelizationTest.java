@@ -17,11 +17,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 
-import test.thread.parallelization.TestNgRunStateTracker.EventLog;
-import test.thread.parallelization.TestNgRunStateTracker.TestNgRunEvent;
+import test.TestNgRunStateTracker.EventLog;
+import test.TestNgRunStateTracker.TestNgRunEvent;
 
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertFalse;
@@ -29,18 +27,22 @@ import static org.testng.Assert.assertNull;
 import static org.testng.Assert.assertTrue;
 
 import static org.testng.Assert.fail;
-import static test.thread.parallelization.TestNgRunStateTracker.EventInfo.CLASS_INSTANCE;
-import static test.thread.parallelization.TestNgRunStateTracker.EventInfo.CLASS_NAME;
-import static test.thread.parallelization.TestNgRunStateTracker.EventInfo.METHOD_NAME;
-import static test.thread.parallelization.TestNgRunStateTracker.EventInfo.SUITE_NAME;
-import static test.thread.parallelization.TestNgRunStateTracker.TestNgRunEvent.LISTENER_SUITE_START;
-import static test.thread.parallelization.TestNgRunStateTracker.TestNgRunEvent.LISTENER_SUITE_FINISH;
-import static test.thread.parallelization.TestNgRunStateTracker.TestNgRunEvent.LISTENER_TEST_FINISH;
-import static test.thread.parallelization.TestNgRunStateTracker.TestNgRunEvent.LISTENER_TEST_METHOD_PASS;
-import static test.thread.parallelization.TestNgRunStateTracker.TestNgRunEvent.LISTENER_TEST_METHOD_START;
-import static test.thread.parallelization.TestNgRunStateTracker.TestNgRunEvent.LISTENER_TEST_START;
-import static test.thread.parallelization.TestNgRunStateTracker.TestNgRunEvent.TEST_METHOD_EXECUTION;
-import static test.thread.parallelization.TestNgRunStateTracker.getTestMethodEventLogsForMethod;
+import static test.TestNgRunStateTracker.EventInfo.CLASS_INSTANCE;
+import static test.TestNgRunStateTracker.EventInfo.CLASS_NAME;
+import static test.TestNgRunStateTracker.EventInfo.GROUPS_DEPENDED_ON;
+import static test.TestNgRunStateTracker.EventInfo.METHODS_DEPENDED_ON;
+import static test.TestNgRunStateTracker.EventInfo.METHOD_NAME;
+import static test.TestNgRunStateTracker.EventInfo.SUITE_NAME;
+import static test.TestNgRunStateTracker.TestNgRunEvent.LISTENER_SUITE_START;
+import static test.TestNgRunStateTracker.TestNgRunEvent.LISTENER_SUITE_FINISH;
+import static test.TestNgRunStateTracker.TestNgRunEvent.LISTENER_TEST_FINISH;
+import static test.TestNgRunStateTracker.TestNgRunEvent.LISTENER_TEST_METHOD_PASS;
+import static test.TestNgRunStateTracker.TestNgRunEvent.LISTENER_TEST_METHOD_START;
+import static test.TestNgRunStateTracker.TestNgRunEvent.LISTENER_TEST_START;
+import static test.TestNgRunStateTracker.TestNgRunEvent.TEST_METHOD_EXECUTION;
+import static test.TestNgRunStateTracker.getTestMethodEventLogsForMethod;
+import static test.TestNgRunStateTracker.getTestMethodEventLogsForMethodsBelongingToGroupsDependedOn;
+import static test.TestNgRunStateTracker.getTestMethodEventLogsForMethodsDependedOn;
 
 public class BaseParallelizationTest extends SimpleBaseTest {
 
@@ -315,6 +317,16 @@ public class BaseParallelizationTest extends SimpleBaseTest {
     public static void verifySimultaneousTestMethods(List<EventLog> testMethodEventLogs, String
             testName, int  threadCount) {
 
+        //Find the methods which have no dependencies and which can be executed first.
+        List<EventLog> freeMethods = new ArrayList<>();
+
+        for(EventLog log : testMethodEventLogs) {
+            if(((String[])log.getData(METHODS_DEPENDED_ON)).length == 0 &&
+                    ((String[])log.getData(GROUPS_DEPENDED_ON)).length == 0) {
+                freeMethods.add(log);
+            }
+        }
+
         System.out.println("Verifying parallel execution of test methods for test named " + testName  + " with " +
                 "thread count " + threadCount);
         System.out.println(testMethodEventLogs.size() + " test method event logs for " + testMethodEventLogs.size() / 3
@@ -335,11 +347,10 @@ public class BaseParallelizationTest extends SimpleBaseTest {
         //thread IDs are found in the rest of the event logs.
         List<Long> allThreadIds = new ArrayList<>();
 
-        //If number of test methods is more than the thread count, then the first block of methods will be equal to
-        //the thread count. If not, it will be equal to the total number of methods.
-        int blockSize = testMethodEventLogs.size() / 3 >= threadCount ? threadCount :
-                testMethodEventLogs.size() / 3;
-
+        //If number of free test methods is more than the thread count, then the first block of methods will be equal to
+        //the thread count. If not, it will be equal to the number of free methods methods.
+        int blockSize = freeMethods.size() / 3 < threadCount ? freeMethods.size() / 3 :
+                threadCount;
         //Get the start events for the first batch of methods.
         List<EventLog> eventLogTestMethodListenerStartEvents = testMethodEventLogs.subList(0, blockSize);
 
@@ -375,6 +386,11 @@ public class BaseParallelizationTest extends SimpleBaseTest {
                     (String)eventLog.getData(METHOD_NAME) + ":" + eventLog.getData(CLASS_INSTANCE).hashCode();
 
             if(eventLog.getEvent() == LISTENER_TEST_METHOD_START) {
+
+                if(allThreadIds.size() < threadCount && !allThreadIds.contains(eventLog.getThreadId())) {
+                    allThreadIds.add(eventLog.getThreadId());
+                }
+
                 assertTrue(methodsExecuting.get(classAndMethodNameAndInstanceHash) == null &&
                         methodsCompleted.get(classAndMethodNameAndInstanceHash) == null, "There should only be one " +
                         "execution of any given method");
@@ -620,20 +636,55 @@ public class BaseParallelizationTest extends SimpleBaseTest {
         }
     }
 
+    public static void verifyThatTestMethodsRunAfterMethodsTheyDependOn(String suiteName, String testName,
+            List<Class<?>> classes) {
+
+        for(Class<?> clazz : classes) {
+            for(Method method : getTestMethods(clazz)) {
+                Multimap<Object, EventLog> eventLogsForMethod = getTestMethodEventLogsForMethod(suiteName, testName,
+                        clazz.getCanonicalName(), method.getName());
+
+                Multimap<Object, EventLog> eventLogsForMethodsDependedOn =
+                        getTestMethodEventLogsForMethodsDependedOn(suiteName, testName, clazz.getCanonicalName(),
+                                method.getName());
+
+                Multimap<Object, EventLog> eventLogsForMethodsBelongingToGroupsDependedOn =
+                        getTestMethodEventLogsForMethodsBelongingToGroupsDependedOn(suiteName, testName,
+                                clazz.getCanonicalName(), method.getName());
+
+                for(Object instance : eventLogsForMethod.keySet()) {
+                    EventLog startEventOfDependingMethod = (EventLog)eventLogsForMethod.get(instance).toArray()[0];
+
+                    for(EventLog eventLog : eventLogsForMethodsDependedOn.get(instance)) {
+                        assertTrue(eventLog.getTimeOfEvent() < startEventOfDependingMethod.getTimeOfEvent(),
+                                "All methods that a method depends on should execute before it: " +
+                                        eventLog + ", " + startEventOfDependingMethod);
+                    }
+
+                    for(EventLog eventLog : eventLogsForMethodsBelongingToGroupsDependedOn.get(instance)) {
+                        assertTrue(eventLog.getTimeOfEvent() < startEventOfDependingMethod.getTimeOfEvent(),
+                                "All methods belonging to groups that a method depends on should execute " +
+                                        "before it: " + eventLog + ", " + startEventOfDependingMethod);
+                    }
+                }
+            }
+        }
+    }
+
     public static void verifySequentialSuites(List<EventLog> suiteLevelEventLogs, Map<String,List<EventLog>>
             suiteEventLogsMap) {
 
-        verifySameThreadIdForAllEvents(suiteLevelEventLogs, "Because the suites execute sequentially, the event logs " +
-                "suite level events should have the same thread ID: " + suiteLevelEventLogs);
+        verifySameThreadIdForAllEvents(suiteLevelEventLogs, "Because the suites execute sequentially, the " +
+                "event logs suite level events should have the same thread ID: " + suiteLevelEventLogs);
 
         List<EventLog> suiteListenerStartEventLogs = new ArrayList<>();
 
         for (int i = 0; i < suiteLevelEventLogs.size(); i = i + 2) {
             assertTrue(suiteLevelEventLogs.get(i).getEvent() == LISTENER_SUITE_START &&
-                    suiteLevelEventLogs.get(i + 1).getEvent() == LISTENER_SUITE_FINISH, "Because the suites are " +
-                    "expected to execute sequentially, the suite level event logs should consist of a series of " +
-                    "pairs of a suite listener onStart event logger followed by a suite listener onFinish event logger: " +
-                    suiteLevelEventLogs);
+                    suiteLevelEventLogs.get(i + 1).getEvent() == LISTENER_SUITE_FINISH, "Because the suites " +
+                    "are expected to execute sequentially, the suite level event logs should consist of a series of " +
+                    "pairs of a suite listener onStart event logger followed by a suite listener onFinish event " +
+                    "logger: " + suiteLevelEventLogs);
             suiteListenerStartEventLogs.add((suiteLevelEventLogs.get(i)));
         }
 
@@ -798,7 +849,7 @@ public class BaseParallelizationTest extends SimpleBaseTest {
     }
 
     private static boolean allExecutingMethodsHaveMoreInvocations(Map<String, EventLog> methodsExecuting,
-        Map<String, Integer> methodInvocationsCounts, Map<String, Integer> expectedInvocationCounts) {
+            Map<String, Integer> methodInvocationsCounts, Map<String, Integer> expectedInvocationCounts) {
 
         for(String methodAndClassName : methodsExecuting.keySet()) {
             if(Objects.equals(methodInvocationsCounts.get(methodAndClassName),
@@ -822,6 +873,23 @@ public class BaseParallelizationTest extends SimpleBaseTest {
         }
 
         return sb.toString();
+    }
+
+    private static List<Method> getTestMethods(Class<?> testClass) {
+        List<Method> methods = new ArrayList<>();
+
+        for (Method method : testClass.getMethods()) {
+
+            Annotation[] annotations = method.getDeclaredAnnotations();
+
+            for (Annotation a : annotations) {
+                if (Test.class.isAssignableFrom(a.getClass())) {
+                    methods.add(method);
+                }
+            }
+        }
+
+        return methods;
     }
 }
 

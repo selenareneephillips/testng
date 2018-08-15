@@ -8,6 +8,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.Callable;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.regex.Pattern;
@@ -16,6 +17,7 @@ import org.testng.IClass;
 import org.testng.IRetryAnalyzer;
 import org.testng.ITestClass;
 import org.testng.ITestNGMethod;
+import org.testng.ITestNGMethodWithMetaGroups;
 import org.testng.annotations.ITestOrConfiguration;
 import org.testng.collections.Lists;
 import org.testng.collections.Maps;
@@ -23,10 +25,14 @@ import org.testng.collections.Sets;
 import org.testng.internal.annotations.IAnnotationFinder;
 import org.testng.xml.XmlClass;
 import org.testng.xml.XmlInclude;
+import org.testng.xml.XmlSuite;
 import org.testng.xml.XmlTest;
 
-/** Superclass to represent both &#64;Test and &#64;Configuration methods. */
-public abstract class BaseTestMethod implements ITestNGMethod {
+
+/**
+ * Superclass to represent both &#64;Test and &#64;Configuration methods.
+ */
+public abstract class BaseTestMethod implements ITestNGMethod, ITestNGMethodWithMetaGroups {
 
   private static final Pattern SPACE_SEPARATOR_PATTERN = Pattern.compile(" +");
 
@@ -43,6 +49,7 @@ public abstract class BaseTestMethod implements ITestNGMethod {
   protected long m_date = -1;
   protected final IAnnotationFinder m_annotationFinder;
   protected String[] m_groups = {};
+  protected Map<String, List<String>> m_metaGroups = new ConcurrentHashMap<>();
   protected String[] m_groupsDependedUpon = {};
   protected String[] m_methodsDependedUpon = {};
   protected String[] m_beforeGroups = {};
@@ -148,6 +155,15 @@ public abstract class BaseTestMethod implements ITestNGMethod {
   @Override
   public String[] getGroups() {
     return m_groups;
+  }
+
+  /**
+   * {@inheritDoc}
+   * @return the addition of groups defined on the class and on this method.
+   */
+  @Override
+  public Map<String, List<String>> getMetaGroups() {
+      return m_metaGroups;
   }
 
   /** {@inheritDoc} */
@@ -366,6 +382,11 @@ public abstract class BaseTestMethod implements ITestNGMethod {
     initRestOfGroupDependencies(annotationClass);
   }
 
+  setGroups(getStringArray(null != annotation ? annotation.getGroups() : null,
+          null != classAnnotation ? classAnnotation.getGroups() : null));
+  
+  setMetaGroups(m_xmlTest);
+  
   private String[] calculateGroupsTouseConsideringValuesAndGroupValues(
       Class<? extends ITestOrConfiguration> annotationClass, String[] groups) {
     if (groups == null || groups.length == 0) {
@@ -481,17 +502,51 @@ public abstract class BaseTestMethod implements ITestNGMethod {
 
   protected String[] getStringArray(String[] methodArray, String[] classArray) {
     final Set<String> vResult = Sets.newHashSet();
+
     if (null != methodArray) {
       Collections.addAll(vResult, methodArray);
     }
     if (null != classArray) {
       Collections.addAll(vResult, classArray);
     }
+
     return vResult.toArray(new String[0]);
   }
 
   protected void setGroups(String[] groups) {
     m_groups = groups;
+  }
+
+  protected void setMetaGroups(XmlTest xmlTest) {
+      final Map<String, List<String>> result = Maps.newHashMap();
+      final Map<String, List<String>> allMetaGroups = Maps.newHashMap();
+      final Map<String, List<String>> metaGroupsContainingMetaGroups = Maps.newHashMap();
+
+      allMetaGroups.putAll(xmlTest.getMetaGroups());
+
+      XmlSuite suite = xmlTest.getSuite();
+
+      while(suite != null) {
+        allMetaGroups.putAll(suite.getMetaGroups());
+        suite = suite.getParentSuite();
+      }
+
+      for(Map.Entry<String, List<String>> e : allMetaGroups.entrySet()) {
+          for(String v : e .getValue()) {
+              if(allMetaGroups.keySet().contains(v)) {
+                  metaGroupsContainingMetaGroups.put(e.getKey(), e.getValue());
+              }
+
+              for(String group : m_groups) {
+                  if(Pattern.matches(v, group)) {
+                      result.put(e.getKey(), e.getValue());
+                      break;
+                  }
+              }
+          }
+      }
+
+      this.m_metaGroups.putAll(result);
   }
 
   protected void setGroupsDependedUpon(String[] groups, Collection<String> xmlGroupDependencies) {
