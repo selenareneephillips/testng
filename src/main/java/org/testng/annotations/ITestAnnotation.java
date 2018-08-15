@@ -5,79 +5,85 @@ import org.testng.internal.annotations.IDataProvidable;
 
 /**
  * Encapsulate the &#64;Test / &#64;testng.test annotation.
- *
- * Created on Dec 20, 2005
- * @author <a href = "mailto:cedric&#64;beust.com">Cedric Beust</a>
  */
 public interface ITestAnnotation extends ITestOrConfiguration, IDataProvidable {
   /**
    * Returns the number of times this method should be invoked.
+   *
    * @return the number of times this method should be invoked.
    */
-  public int getInvocationCount();
-  public void setInvocationCount(int l);
+  int getInvocationCount();
+
+  void setInvocationCount(int l);
 
   /**
-   * The size of the thread pool for this method.  The method will be invoked
-   * from multiple threads as specified by invocationCount.
-   * Note:  this attribute is ignored if invocationCount is not specified
+   * The size of the thread pool for this method. The method will be invoked from multiple threads
+   * as specified by invocationCount. Note: this attribute is ignored if invocationCount is not
+   * specified
    */
-  public int getThreadPoolSize();
-  public void setThreadPoolSize(int n);
+  int getThreadPoolSize();
+
+  void setThreadPoolSize(int n);
+
+  /** The percentage of success expected from this method. */
+  int getSuccessPercentage();
+
+  void setSuccessPercentage(int s);
 
   /**
-   * The percentage of success expected from this method.
+   * If set to true, this test method will always be run even if it depends on a method that failed.
+   * This attribute will be ignored if this test doesn't depend on any method or group.
    */
-  public int getSuccessPercentage();
-  public void setSuccessPercentage(int s);
+  boolean getAlwaysRun();
 
-  /**
-   * If set to true, this test method will always be run even if it depends
-   * on a method that failed.  This attribute will be ignored if this test
-   * doesn't depend on any method or group.
-   */
-  public boolean getAlwaysRun();
-  public void setAlwaysRun(boolean f);
+  void setAlwaysRun(boolean f);
 
-  public Class<?>[] getExpectedExceptions();
-  public void setExpectedExceptions(Class<?>[] e);
+  Class<?>[] getExpectedExceptions();
 
-  public String getExpectedExceptionsMessageRegExp();
-  public void setExpectedExceptionsMessageRegExp(String e);
+  void setExpectedExceptions(Class<?>[] e);
 
-  public String getSuiteName();
-  public void setSuiteName(String s);
+  String getExpectedExceptionsMessageRegExp();
 
-  public String getTestName();
-  public void setTestName(String s);
+  void setExpectedExceptionsMessageRegExp(String e);
 
-  public boolean getSequential();
-  public void setSequential(boolean f);
+  String getSuiteName();
 
-  public boolean getSingleThreaded();
-  public void setSingleThreaded(boolean f);
+  void setSuiteName(String s);
 
-  public String getDataProvider();
-  public void setDataProvider(String v);
+  String getTestName();
 
-  public Class<?> getDataProviderClass();
-  public void setDataProviderClass(Class<?> v);
+  void setTestName(String s);
 
-  public IRetryAnalyzer getRetryAnalyzer();
-  public void setRetryAnalyzer(Class<?> c);
+  boolean getSingleThreaded();
 
-  public boolean skipFailedInvocations();
-  public void setSkipFailedInvocations(boolean skip);
+  void setSingleThreaded(boolean f);
 
-  public long invocationTimeOut();
-  public void setInvocationTimeOut(long timeOut);
+  String getDataProvider();
 
-  public boolean ignoreMissingDependencies();
-  public void setIgnoreMissingDependencies(boolean ignore);
+  void setDataProvider(String v);
 
-  /**
-   * The scheduling priority. Lower priorities get scheduled first.
-   */
-  public int getPriority();
-  public void setPriority(int priority);
+  Class<?> getDataProviderClass();
+
+  void setDataProviderClass(Class<?> v);
+
+  IRetryAnalyzer getRetryAnalyzer();
+
+  void setRetryAnalyzer(Class<? extends IRetryAnalyzer> c);
+
+  boolean skipFailedInvocations();
+
+  void setSkipFailedInvocations(boolean skip);
+
+  long invocationTimeOut();
+
+  void setInvocationTimeOut(long timeOut);
+
+  boolean ignoreMissingDependencies();
+
+  void setIgnoreMissingDependencies(boolean ignore);
+
+  /** The scheduling priority. Lower priorities get scheduled first. */
+  int getPriority();
+
+  void setPriority(int priority);
 }

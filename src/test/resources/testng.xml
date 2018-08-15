@@ -74,6 +74,7 @@
       </run>
     </groups>
     <classes>
+      <class name="test.graph.GraphVisualiserTest"/>
       <class name="test.Test1" />
       <class name="test.MethodTest" />
       <class name="test.sample.AfterClassCalledAtEnd"/>
@@ -119,6 +120,7 @@
       <class name="test.testng249.VerifyTest"/>
       <class name="test.testng195.AfterMethodTest" />
       <class name="test.regression.BeforeTestFailingTest"/>
+      <class name="test.configuration.github1700.RunTest"/>
       <class name="test.testng285.TestNG285Test" />
       <class name="test.failedreporter.FailedReporterTest" />
       <class name="test.attributes.AttributeTest"/>
@@ -145,6 +147,7 @@
       <class name="test.bug92.Bug92Test" />
       <class name="test.ReturnValueTest" />
       <class name="test.groupbug.GroupBugTest" />
+      <class name="test.groups.issue1834.IssueTest"/>
       <class name="test.parameters.ShadowTest" />
       <class name="test.parameters.ParameterOverrideTest" />
       <class name="test.parameters.ParameterInjectAndOptionTest" />
@@ -162,9 +165,14 @@
       <class name="test.issue107.Issue107Test"/>
       <class name="test.test111.Test1" />
       <class name="test.testng173.TestNG173Test" />
+      <class name="test.listeners.ordering.IssueTest"/>
       <class name="test.listeners.github551.Test551"/>
       <class name="test.listeners.github1284.TestListeners"/>
+      <class name="test.listeners.github1735.ExecutionListenerTest"/>
+      <class name="test.listeners.github1602.IssueTest"/>
+      <class name="test.listeners.issue1777.IssueTest"/>
       <class name="test_result.GitHub1197Test"/>
+      <class name="test_result.issue1590.IssueTest"/>
       <class name="test.listeners.github1319.TestResultInstanceCheckTest"/>
       <class name="test.testng1396.ParallelByInstancesInterceptorTest"/>
       <class name="test.github1417.TestParamsInjectionInBeforeClass"/>
@@ -172,8 +180,13 @@
       <class name="test.github1461.MemoryLeakTestNg" />
       <!-- TODO fix the random issue <class name="test.issue565.Issue565Test"/>-->
       <class name="test.factory.github328.GitHub328Test" />
+      <class name="test.factory.issue1745.Github1745Test"/>
+      <class name="test.objectfactory.github1827.GitHub1827Test"/>
       <class name="test.github1490.VerifyDataProviderListener"/>      
       <class name="test.methodselection.MethodSelectionTest"/>
+      <class name="test.beforegroups.BeforeGroupsTest"/>
+      <class name="test.aftergroups.issue1880.IssueTest"/>
+      <class name="test.invocationcount.issue1719.IssueTest"/>
     </classes>
   </test>
 
@@ -532,8 +545,8 @@
   <test name="Method selectors">
     <classes>
       <class name="test.methodselectors.MethodSelectorTest" />
-      <class name="test.methodselectors.BeanShellTest" />
-      <class name="test.methodselectors.BeanShellNegativeTest" />
+      <class name="test.methodselectors.ScriptTest" />
+      <class name="test.methodselectors.ScriptNegativeTest" />
       <class name="test.methodselectors.CommandLineTest" />
       <class name="test.methodselectors.MethodSelectorInSuiteTest" />
     </classes>
@@ -632,6 +645,7 @@
       <class name="test.JUnit4Test" />
       <class name="test.junit4.listeners.Issue323TestRunner"/>
       <class name="test.groovy.GroovyTest" />
+      <class name="test.JUnitTestClassLoader" />
     </classes>
   </test>
 
@@ -679,6 +693,7 @@
     <classes>
       <class name="test.skipex.SkippedExceptionTest" />
       <class name="test.skipex.SkipAndExpectedTest" />
+      <class name="test.skip.GitHubIssue1878Test"/>
     </classes>
   </test>
 
@@ -695,6 +710,7 @@
       <class name="test.methodinterceptors.MethodInterceptorTest" />
       <class name="test.methodinterceptors.Issue392Test" />
       <class name="test.methodinterceptors.multipleinterceptors.MultipleInterceptorsTest" />
+      <class name="test.methodinterceptors.issue1726.CustomInterceptorTest"/>
     </classes>
   </test>
 
@@ -785,6 +801,8 @@
       <class name="test.configuration.GroupsTest"/>
       <class name="test.configuration.MethodCallOrderTest"/>
       <class name="test.configuration.MultipleBeforeGroupTest" />
+      <class name="test.configuration.BeforeMethodWithGroupFiltersTest" />
+      <class name="test.configuration.AfterMethodWithGroupFiltersTest" />
       <class name="test.configuration.ReflectMethodParametrizedConfigurationMethodTest" />
       <class name="test.configuration.SuiteFactoryOnceTest" />
       <class name="test.configuration.SuiteTest" />
@@ -792,6 +810,7 @@
       <class name="test.configuration.SingleConfigurationTest" />
       <class name="test.configuration.BeforeClassWithDisabledTest" />
       <class name="test.configuration.github1625.TestRunnerIssue1625"/>
+      <class name="test.configuration.issue1753.IssueTest"/>
     </classes>
   </test>
 
@@ -855,6 +874,8 @@
   <test name="Suite_Related_Tests">
     <classes>
       <class name="test.suites.github1533.Github1533Test"/>
+      <class name="test.suites.github1850.DuplicateChildSuitesInitializationTest"/>
+      <class name="test.suites.github1874.IssueTest"/>
     </classes>
   </test>
 
@@ -881,6 +902,18 @@
   <test name="RunOrderingTest">
     <classes>
       <class name="test.github799.EnsureInstancesAreOrderedViaFactories"/>
+    </classes>
+  </test>
+
+  <test name="threadAffinity">
+    <classes>
+      <class name="test.thread.parallelization.issue1773.IssueTest"/>
+    </classes>
+  </test>
+
+  <test name="Default method tests">
+    <classes>
+      <class name="test.defaultmethods.DefaultMethodTest"/>
     </classes>
   </test>
 

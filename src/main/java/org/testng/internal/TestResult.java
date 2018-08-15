@@ -1,7 +1,9 @@
 package org.testng.internal;
 
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.stream.Collectors;
 import org.testng.IAttributes;
-import org.testng.IAlterTestName;
 import org.testng.IClass;
 import org.testng.ITest;
 import org.testng.ITestContext;
@@ -9,20 +11,21 @@ import org.testng.ITestNGMethod;
 import org.testng.ITestResult;
 import org.testng.Reporter;
 import org.testng.TestNGException;
+import org.testng.collections.Lists;
 import org.testng.collections.Objects;
 
+import javax.annotation.Nonnull;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.List;
 import java.util.Set;
 
-/**
- * This class represents the result of a test.
- */
-public class TestResult implements ITestResult, IAlterTestName {
+/** This class represents the result of a test. */
+public class TestResult implements ITestResult {
 
-  private IClass m_testClass = null;
   private ITestNGMethod m_method = null;
+  private List<ITestNGMethod> skippedDueTo = Lists.newArrayList();
+  private boolean skipAnalysed = false;
   private int m_status = CREATED;
   private Throwable m_throwable = null;
   private long m_startMillis = 0;
@@ -30,42 +33,54 @@ public class TestResult implements ITestResult, IAlterTestName {
   private String m_name = null;
   private String m_host;
   private Object[] m_parameters = {};
-  private Object m_instance;
   private String m_instanceName;
   private ITestContext m_context;
   private int parameterIndex;
+  private boolean m_wasRetried;
 
-  public TestResult() {
-
+  private TestResult() {
+    //defeat instantiation. We have factory methods.
   }
 
-  public TestResult(Object instance, ITestNGMethod method, Throwable throwable, ITestContext context) {
+  public static TestResult newEmptyTestResult() {
+    return new TestResult();
+  }
+
+  public static TestResult newTestResultFor(ITestNGMethod method) {
+    return newContextAwareTestResult(method, null);
+  }
+
+  public static TestResult newContextAwareTestResult(ITestNGMethod method, ITestContext ctx) {
+    TestResult result = newEmptyTestResult();
     long time = System.currentTimeMillis();
-    init(method.getTestClass(), instance, method, throwable, time, time, context);
+    result.init(method, null, time, 0L, ctx);
+    return result;
   }
 
-  public TestResult(IClass testClass,
-      Object instance,
+  public static TestResult newTestResultWithCauseAs(ITestNGMethod method, ITestContext ctx,
+      Throwable t) {
+    TestResult result = newEmptyTestResult();
+    long time = System.currentTimeMillis();
+    result.init(method, t, time, time, ctx);
+    return result;
+  }
+
+  public static TestResult newEndTimeAwareTestResult(ITestNGMethod method, ITestContext ctx,
+      Throwable t, long start) {
+    TestResult result = newEmptyTestResult();
+    long time = System.currentTimeMillis();
+    result.init(method, t, start, time, ctx);
+    return result;
+  }
+
+  public void init(
       ITestNGMethod method,
       Throwable throwable,
       long start,
       long end,
-      ITestContext context)
-  {
-    init(testClass, instance, method, throwable, start, end, context);
-  }
-
-  public void init (IClass testClass,
-      Object instance,
-      ITestNGMethod method,
-      Throwable throwable,
-      long start,
-      long end,
-      ITestContext context)
-  {
-    m_testClass = testClass;
+      ITestContext context) {
     m_throwable = throwable;
-    m_instanceName = m_testClass.getName();
+    m_instanceName = method.getTestClass().getName();
     if (null == m_throwable) {
       m_status = ITestResult.SUCCESS;
     }
@@ -74,30 +89,30 @@ public class TestResult implements ITestResult, IAlterTestName {
     m_method = method;
     m_context = context;
 
-    m_instance = instance;
+    Object instance = method.getInstance();
 
     // Calculate the name: either the method name, ITest#getTestName or
     // toString() if it's been overridden.
-    if (m_instance == null) {
+    if (instance == null) {
       m_name = m_method.getMethodName();
     } else {
-      if (m_instance instanceof ITest) {
-        m_name = ((ITest) m_instance).getTestName();
-      } else if (testClass.getTestName() != null) {
-        m_name = testClass.getTestName();
+      if (instance instanceof ITest) {
+        m_name = ((ITest) instance).getTestName();
+      } else if (method.getTestClass().getTestName() != null) {
+        m_name = method.getTestClass().getTestName();
       } else {
-        String string = m_instance.toString();
+        String string = instance.toString();
         // Only display toString() if it's been overridden by the user
         m_name = getMethod().getMethodName();
         try {
-          if (!Object.class.getMethod("toString")
-              .equals(m_instance.getClass().getMethod("toString"))) {
-            m_instanceName = string.startsWith("class ")
-                ? string.substring("class ".length())
-                : string;
+          if (!Object.class
+              .getMethod("toString")
+              .equals(instance.getClass().getMethod("toString"))) {
+            m_instanceName =
+                string.startsWith("class ") ? string.substring("class ".length()) : string;
             m_name = m_name + " on " + m_instanceName;
           }
-        } catch(NoSuchMethodException ignore) {
+        } catch (NoSuchMethodException ignore) {
           // ignore
         }
       }
@@ -110,16 +125,17 @@ public class TestResult implements ITestResult, IAlterTestName {
   }
 
   /**
-   * If this result's related instance implements ITest or use @Test(testName=...), returns its test name,
-   * otherwise returns null.
+   * If this result's related instance implements ITest or use @Test(testName=...), returns its test
+   * name, otherwise returns null.
    */
   @Override
   public String getTestName() {
-    if (m_instance instanceof ITest) {
-      return ((ITest) m_instance).getTestName();
+    Object instance = this.m_method.getInstance();
+    if (instance instanceof ITest) {
+      return ((ITest) instance).getTestName();
     }
-    if (m_testClass.getTestName() != null) {
-      return m_testClass.getTestName();
+    if (m_method.getTestClass().getTestName() != null) {
+      return m_method.getTestClass().getTestName();
     }
     return null;
   }
@@ -129,32 +145,24 @@ public class TestResult implements ITestResult, IAlterTestName {
     return m_name;
   }
 
-  /**
-   * @return Returns the method.
-   */
+  /** @return Returns the method. */
   @Override
   public ITestNGMethod getMethod() {
     return m_method;
   }
 
-  /**
-   * @param method The method to set.
-   */
+  /** @param method The method to set. */
   public void setMethod(ITestNGMethod method) {
     m_method = method;
   }
 
-  /**
-   * @return Returns the status.
-   */
+  /** @return Returns the status. */
   @Override
   public int getStatus() {
     return m_status;
   }
 
-  /**
-   * @param status The status to set.
-   */
+  /** @param status The status to set. */
   @Override
   public void setStatus(int status) {
     m_status = status;
@@ -165,48 +173,31 @@ public class TestResult implements ITestResult, IAlterTestName {
     return ITestResult.SUCCESS == m_status;
   }
 
-  /**
-   * @return Returns the testClass.
-   */
+  /** @return Returns the testClass. */
   @Override
   public IClass getTestClass() {
-    return m_testClass;
+    return m_method.getTestClass();
   }
 
-  /**
-   * @param testClass The testClass to set.
-   */
-  public void setTestClass(IClass testClass) {
-    m_testClass = testClass;
-  }
-
-  /**
-   * @return Returns the throwable.
-   */
+  /** @return Returns the throwable. */
   @Override
   public Throwable getThrowable() {
     return m_throwable;
   }
 
-  /**
-   * @param throwable The throwable to set.
-   */
+  /** @param throwable The throwable to set. */
   @Override
   public void setThrowable(Throwable throwable) {
     m_throwable = throwable;
   }
 
-  /**
-   * @return Returns the endMillis.
-   */
+  /** @return Returns the endMillis. */
   @Override
   public long getEndMillis() {
     return m_endMillis;
   }
 
-  /**
-   * @return Returns the startMillis.
-   */
+  /** @return Returns the startMillis. */
   @Override
   public long getStartMillis() {
     return m_startMillis;
@@ -223,18 +214,24 @@ public class TestResult implements ITestResult, IAlterTestName {
         .add("method", m_method)
         .add("output", output != null && output.size() > 0 ? output.get(0) : null)
         .toString();
-
   }
 
   private static String toString(int status) {
-    switch(status) {
-      case SUCCESS: return "SUCCESS";
-      case FAILURE: return "FAILURE";
-      case SKIP: return "SKIP";
-      case SUCCESS_PERCENTAGE_FAILURE: return "SUCCESS WITHIN PERCENTAGE";
-      case STARTED: return "STARTED";
-      case CREATED: return "CREATED";
-      default: throw new TestNGException("Encountered an un-defined test status of [" + status + "].");
+    switch (status) {
+      case SUCCESS:
+        return "SUCCESS";
+      case FAILURE:
+        return "FAILURE";
+      case SKIP:
+        return "SKIP";
+      case SUCCESS_PERCENTAGE_FAILURE:
+        return "SUCCESS WITHIN PERCENTAGE";
+      case STARTED:
+        return "STARTED";
+      case CREATED:
+        return "CREATED";
+      default:
+        throw new TestNGException("Encountered an un-defined test status of [" + status + "].");
     }
   }
 
@@ -261,7 +258,10 @@ public class TestResult implements ITestResult, IAlterTestName {
         try {
           Method clone = parameters[i].getClass().getDeclaredMethod("clone");
           m_parameters[i] = clone.invoke(parameters[i]);
-        } catch (NoSuchMethodException | InvocationTargetException | IllegalAccessException | SecurityException e) {
+        } catch (NoSuchMethodException
+            | InvocationTargetException
+            | IllegalAccessException
+            | SecurityException e) {
           m_parameters[i] = parameters[i];
         }
       } else {
@@ -272,7 +272,7 @@ public class TestResult implements ITestResult, IAlterTestName {
 
   @Override
   public Object getInstance() {
-    return m_instance;
+    return this.m_method.getInstance();
   }
 
   private final IAttributes m_attributes = new Attributes();
@@ -299,15 +299,15 @@ public class TestResult implements ITestResult, IAlterTestName {
 
   @Override
   public ITestContext getTestContext() {
-	  return m_context;
+    return m_context;
   }
 
   public void setContext(ITestContext context) {
-	  m_context = context;
+    m_context = context;
   }
 
   @Override
-  public int compareTo(ITestResult comparison) {
+  public int compareTo(@Nonnull ITestResult comparison) {
     return Long.compare(getStartMillis(), comparison.getStartMillis());
   }
 
@@ -328,5 +328,96 @@ public class TestResult implements ITestResult, IAlterTestName {
   public int getParameterIndex() {
     return parameterIndex;
   }
-}
 
+  public boolean wasRetried() {
+    return m_wasRetried;
+  }
+
+  public void setWasRetried(boolean wasRetried) {
+    this.m_wasRetried = wasRetried;
+  }
+
+  public List<ITestNGMethod> getSkipCausedBy() {
+    if (this.m_status != SKIP || skipAnalysed) {
+      return Collections.unmodifiableList(skippedDueTo);
+    }
+    skipAnalysed = true;
+    //check if there were any config failures
+    Set<ITestResult> skippedConfigs = m_context.getFailedConfigurations().getAllResults();
+    for (ITestResult skippedConfig : skippedConfigs) {
+      if (isGlobalFailure(skippedConfig) || isRelated(skippedConfig)) {
+        //If there's a failure in @BeforeTest/@BeforeSuite/@BeforeClass
+        //then the reason is most often just one method.
+        skippedDueTo.add(skippedConfig.getMethod());
+      }
+      if (belongToSameGroup(skippedConfig)) {
+        //If its @BeforeGroups then there's a chance that there could be more than one
+        //method. So lets add everything.
+        skippedDueTo.add(skippedConfig.getMethod());
+      }
+    }
+    if (!skippedDueTo.isEmpty()) {
+      //If we found atleast one skipped due to reason, then its time to return back.
+      return Collections.unmodifiableList(skippedDueTo);
+    }
+    //Looks like we didnt have any configuration failures. So some upstream method perhaps failed.
+    if (m_method.getMethodsDependedUpon().length==0) {
+      //Maybe group dependencies exist ?
+      if (m_method.getGroupsDependedUpon().length==0) {
+        return Collections.emptyList();
+      }
+      List<String> upstreamGroups = Arrays.asList(m_method.getGroupsDependedUpon());
+      List<ITestResult> allFailures = Lists.merge(m_context.getFailedTests().getAllResults(),
+          m_context.getFailedButWithinSuccessPercentageTests().getAllResults());
+      skippedDueTo = allFailures.stream()
+          .map(ITestResult::getMethod)
+          .filter(method -> {
+            List<String> currentMethodGroups = Arrays.asList(method.getGroups());
+            List<String> interection = Lists.intersection(upstreamGroups, currentMethodGroups);
+            return !interection.isEmpty();
+          }).collect(Collectors.toList());
+
+      return Collections.unmodifiableList(skippedDueTo);
+    }
+    List<String> upstreamMethods = Arrays.asList(m_method.getMethodsDependedUpon());
+
+    //So we have dependsOnMethod failures
+    List<ITestResult> allfailures = Lists.merge(m_context.getFailedTests().getAllResults(),
+        m_context.getFailedButWithinSuccessPercentageTests().getAllResults());
+    skippedDueTo = allfailures.stream()
+        .map(ITestResult::getMethod)
+        .filter(method -> upstreamMethods.contains(method.getQualifiedName()))
+        .collect(Collectors.toList());
+    return Collections.unmodifiableList(skippedDueTo);
+  }
+
+  private static boolean isGlobalFailure(ITestResult result) {
+    ITestNGMethod m = result.getMethod();
+    return m.isBeforeTestConfiguration() || m.isBeforeSuiteConfiguration();
+  }
+
+  private boolean isRelated(ITestResult result) {
+    ITestNGMethod m = result.getMethod();
+    if (!m.isBeforeClassConfiguration() && !m.isBeforeMethodConfiguration()) {
+      return false;
+    }
+    Object current = this.getInstance();
+    Object thatObject = result.getInstance();
+    return current.getClass().isAssignableFrom(thatObject.getClass()) ||
+        thatObject.getClass().isAssignableFrom(current.getClass());
+  }
+
+  private boolean belongToSameGroup(ITestResult result) {
+    ITestNGMethod m = result.getMethod();
+    if (!m.isBeforeGroupsConfiguration()) {
+      return false;
+    }
+    String[] mygroups = this.m_method.getGroups();
+    if (mygroups.length == 0 || m.getGroups().length ==0) {
+      return false;
+    }
+
+    List<String> cfgMethodGroups = Arrays.asList(m.getGroups());
+    return Arrays.stream(mygroups).anyMatch(cfgMethodGroups::contains);
+  }
+}

@@ -15,7 +15,6 @@ import org.testng.collections.Sets;
 import org.testng.internal.annotations.IAnnotationFinder;
 import org.testng.internal.reflect.ReflectionHelper;
 import org.testng.junit.IJUnitTestRunner;
-import org.testng.log4testng.Logger;
 import org.testng.xml.XmlClass;
 import org.testng.xml.XmlSuite;
 import org.testng.xml.XmlTest;
@@ -31,26 +30,23 @@ import java.util.Map;
 import java.util.Set;
 import java.util.Vector;
 
-/**
- * Utility class for different class manipulations.
- */
+/** Utility class for different class manipulations. */
 public final class ClassHelper {
-  private static final String JUNIT_TESTRUNNER= "org.testng.junit.JUnitTestRunner";
+  private static final String JUNIT_TESTRUNNER = "org.testng.junit.JUnitTestRunner";
   private static final String JUNIT_4_TESTRUNNER = "org.testng.junit.JUnit4TestRunner";
 
   /** The additional class loaders to find classes in. */
   private static final List<ClassLoader> classLoaders = new Vector<>();
+
   private static final String CANNOT_INSTANTIATE_CLASS = "Cannot instantiate class ";
   private static final String CLASS_HELPER = ClassHelper.class.getSimpleName();
-  private static final String SKIP_CALLER_CLS_LOADER = "skip.caller.clsLoader";
 
   /**
-   * When given a file name to form a class name, the file name is parsed and divided
-   * into segments. For example, "c:/java/classes/com/foo/A.class" would be divided
-   * into 6 segments {"C:" "java", "classes", "com", "foo", "A"}. The first segment
-   * actually making up the class name is [3]. This value is saved in lastGoodRootIndex
-   * so that when we parse the next file name, we will try 3 right away. If 3 fails we
-   * will take the long approach. This is just a optimization cache value.
+   * When given a file name to form a class name, the file name is parsed and divided into segments.
+   * For example, "c:/java/classes/com/foo/A.class" would be divided into 6 segments {"C:" "java",
+   * "classes", "com", "foo", "A"}. The first segment actually making up the class name is [3]. This
+   * value is saved in lastGoodRootIndex so that when we parse the next file name, we will try 3
+   * right away. If 3 fails we will take the long approach. This is just a optimization cache value.
    */
   private static int lastGoodRootIndex = -1;
 
@@ -67,7 +63,11 @@ public final class ClassHelper {
   public static <T> T newInstance(Class<T> clazz) {
     try {
       return clazz.newInstance();
-    } catch(IllegalAccessException | InstantiationException | ExceptionInInitializerError | SecurityException e) {
+    } catch (IllegalAccessException
+        | InstantiationException
+        | ExceptionInInitializerError
+        | SecurityException
+        | NullPointerException e) {
       throw new TestNGException(CANNOT_INSTANTIATE_CLASS + clazz.getName(), e);
     }
   }
@@ -76,7 +76,7 @@ public final class ClassHelper {
     try {
       Constructor<T> constructor = clazz.getConstructor();
       return newInstance(constructor);
-    } catch(ExceptionInInitializerError | SecurityException e) {
+    } catch (ExceptionInInitializerError | SecurityException e) {
       throw new TestNGException(CANNOT_INSTANTIATE_CLASS + clazz.getName(), e);
     } catch (NoSuchMethodException e) {
       return null;
@@ -87,18 +87,17 @@ public final class ClassHelper {
     try {
       return constructor.newInstance(parameters);
     } catch (InstantiationException | IllegalAccessException | InvocationTargetException e) {
-      throw new TestNGException(CANNOT_INSTANTIATE_CLASS + constructor.getDeclaringClass().getName(), e);
+      throw new TestNGException(
+          CANNOT_INSTANTIATE_CLASS + constructor.getDeclaringClass().getName(), e);
     }
   }
 
   /**
-   * Tries to load the specified class using the context ClassLoader or if none,
-   * than from the default ClassLoader. This method differs from the standard
-   * class loading methods in that it does not throw an exception if the class
-   * is not found but returns null instead.
+   * Tries to load the specified class using the context ClassLoader or if none, than from the
+   * default ClassLoader. This method differs from the standard class loading methods in that it
+   * does not throw an exception if the class is not found but returns null instead.
    *
    * @param className the class name to be loaded.
-   *
    * @return the class or null if the class is not found.
    */
   public static Class<?> forName(final String className) {
@@ -115,43 +114,43 @@ public final class ClassHelper {
       }
       try {
         return classLoader.loadClass(className);
-      }
-      catch(ClassNotFoundException ex) {
+      } catch (ClassNotFoundException ex) {
         // With additional class loaders, it is legitimate to ignore ClassNotFoundException
         if (classLoaders.isEmpty()) {
           logClassNotFoundError(className, ex);
         }
       }
     }
-    if (Boolean.parseBoolean(System.getProperty(SKIP_CALLER_CLS_LOADER))) {
+    if (RuntimeBehavior.shouldSkipUsingCallerClassLoader()) {
       return null;
     }
 
     try {
       return Class.forName(className);
-    }
-    catch(ClassNotFoundException cnfe) {
+    } catch (ClassNotFoundException cnfe) {
       logClassNotFoundError(className, cnfe);
       return null;
     }
   }
 
   private static void logClassNotFoundError(String className, Exception ex) {
-    Utils.log(CLASS_HELPER, 2, "Could not instantiate " + className
-        + " : Class doesn't exist (" + ex.getMessage() + ")");
+    Utils.log(
+        CLASS_HELPER,
+        2,
+        "Could not instantiate " + className + " : Class doesn't exist (" + ex.getMessage() + ")");
   }
 
   /**
-   * For the given class, returns the method annotated with &#64;Factory or null
-   * if none is found. This method does not search up the superclass hierarchy.
-   * If more than one method is @Factory annotated, a TestNGException is thrown.
+   * For the given class, returns the method annotated with &#64;Factory or null if none is found.
+   * This method does not search up the superclass hierarchy. If more than one method is @Factory
+   * annotated, a TestNGException is thrown.
+   *
    * @param cls The class to search for the @Factory annotation.
    * @param finder The finder (JDK 1.4 or JDK 5.0+) use to search for the annotation.
-   *
    * @return the @Factory <CODE>methods</CODE>
    */
-  public static List<ConstructorOrMethod> findDeclaredFactoryMethods(Class<?> cls,
-                                                                     IAnnotationFinder finder) {
+  public static List<ConstructorOrMethod> findDeclaredFactoryMethods(
+      Class<?> cls, IAnnotationFinder finder) {
     List<ConstructorOrMethod> result = new ArrayList<>();
 
     for (Method method : getAvailableMethods(cls)) {
@@ -176,8 +175,8 @@ public final class ClassHelper {
   }
 
   /**
-   * Extract all callable methods of a class and all its super (keeping in mind
-   * the Java access rules).
+   * Extract all callable methods of a class and all its super (keeping in mind the Java access
+   * rules).
    */
   public static Set<Method> getAvailableMethods(Class<?> clazz) {
     Map<String, Set<Method>> methods = Maps.newHashMap();
@@ -188,7 +187,8 @@ public final class ClassHelper {
     Class<?> parent = clazz.getSuperclass();
     if (null != parent) {
       while (!Object.class.equals(parent)) {
-        Set<Map.Entry<String, Set<Method>>> extractedMethods = extractMethods(clazz, parent, methods).entrySet();
+        Set<Map.Entry<String, Set<Method>>> extractedMethods =
+            extractMethods(clazz, parent, methods).entrySet();
         for (Map.Entry<String, Set<Method>> extractedMethod : extractedMethods) {
           Set<Method> m = methods.get(extractedMethod.getKey());
           if (m == null) {
@@ -210,44 +210,41 @@ public final class ClassHelper {
 
   public static IJUnitTestRunner createTestRunner(TestRunner runner) {
     IJUnitTestRunner tr = null;
+    try {
+      // try to get runner for JUnit 4 first
+      Class.forName("org.junit.Test");
+      Class<?> clazz = ClassHelper.forName(JUNIT_4_TESTRUNNER);
+      if (clazz != null) {
+        tr = (IJUnitTestRunner) clazz.newInstance();
+        tr.setTestResultNotifier(runner);
+      }
+    } catch (Throwable t) {
+      Utils.log(CLASS_HELPER, 2, "JUnit 4 was not found on the classpath");
       try {
-          //try to get runner for JUnit 4 first
-        Class.forName("org.junit.Test");
-        Class<?> clazz = ClassHelper.forName(JUNIT_4_TESTRUNNER);
+        // fallback to JUnit 3
+        Class.forName("junit.framework.Test");
+        Class<?> clazz = ClassHelper.forName(JUNIT_TESTRUNNER);
         if (clazz != null) {
           tr = (IJUnitTestRunner) clazz.newInstance();
           tr.setTestResultNotifier(runner);
         }
-      } catch (Throwable t) {
-          Utils.log(CLASS_HELPER, 2, "JUnit 4 was not found on the classpath");
-          try {
-              //fallback to JUnit 3
-              Class.forName("junit.framework.Test");
-              Class<?> clazz =ClassHelper.forName(JUNIT_TESTRUNNER);
-              if (clazz != null) {
-                tr = (IJUnitTestRunner) clazz.newInstance();
-                tr.setTestResultNotifier(runner);
-              }
-          } catch (Exception ex) {
-              Utils.log(CLASS_HELPER, 2, "JUnit 3 was not found on the classpath");
-              //there's no JUnit on the classpath
-              throw new TestNGException("Cannot create JUnit runner", ex);
-          }
+      } catch (Exception ex) {
+        Utils.log(CLASS_HELPER, 2, "JUnit 3 was not found on the classpath");
+        // there's no JUnit on the classpath
+        throw new TestNGException("Cannot create JUnit runner", ex);
       }
-      return tr;
+    }
+    return tr;
   }
 
   private static void appendMethod(Map<String, Set<Method>> methods, Method declaredMethod) {
-    Set<Method> declaredMethods = methods.get(declaredMethod.getName());
-    if (declaredMethods == null) {
-      declaredMethods = Sets.newHashSet();
-      methods.put(declaredMethod.getName(), declaredMethods);
-    }
+    Set<Method> declaredMethods =
+        methods.computeIfAbsent(declaredMethod.getName(), k -> Sets.newHashSet());
     declaredMethods.add(declaredMethod);
   }
 
-  private static Map<String, Set<Method>> extractMethods(Class<?> childClass, Class<?> clazz,
-      Map<String, Set<Method>> collected) {
+  private static Map<String, Set<Method>> extractMethods(
+      Class<?> childClass, Class<?> clazz, Map<String, Set<Method>> collected) {
     Map<String, Set<Method>> methods = Maps.newHashMap();
 
     Method[] declaredMethods = clazz.getDeclaredMethods();
@@ -265,11 +262,14 @@ public final class ClassHelper {
     return methods;
   }
 
-  private static boolean canInclude(boolean isSamePackage, Method method, Map<String, Set<Method>> collected) {
+  private static boolean canInclude(
+      boolean isSamePackage, Method method, Map<String, Set<Method>> collected) {
     int methodModifiers = method.getModifiers();
-    boolean visible = (Modifier.isPublic(methodModifiers) || Modifier.isProtected(methodModifiers))
-        || (isSamePackage && !Modifier.isPrivate(methodModifiers));
-    boolean hasNoInheritanceTraits = !isOverridden(method, collected) && !Modifier.isAbstract(methodModifiers);
+    boolean visible =
+        (Modifier.isPublic(methodModifiers) || Modifier.isProtected(methodModifiers))
+            || (isSamePackage && !Modifier.isPrivate(methodModifiers));
+    boolean hasNoInheritanceTraits =
+        !isOverridden(method, collected) && !Modifier.isAbstract(methodModifiers);
     return visible && hasNoInheritanceTraits;
   }
 
@@ -293,11 +293,12 @@ public final class ClassHelper {
     Class<?> methodClass = method.getDeclaringClass();
     Class<?>[] methodParams = method.getParameterTypes();
 
-    for (Method m: collectedMethods) {
+    for (Method m : collectedMethods) {
       Class<?>[] paramTypes = m.getParameterTypes();
-      if (methodClass.isAssignableFrom(m.getDeclaringClass()) && methodParams.length == paramTypes.length) {
+      if (methodClass.isAssignableFrom(m.getDeclaringClass())
+          && methodParams.length == paramTypes.length) {
         boolean sameParameters = true;
-        for (int i= 0; i < methodParams.length; i++) {
+        for (int i = 0; i < methodParams.length; i++) {
           if (!methodParams[i].equals(paramTypes[i])) {
             sameParameters = false;
             break;
@@ -317,24 +318,23 @@ public final class ClassHelper {
     try {
       Class<?> cls = Class.forName(selector.getClassName());
       return (IMethodSelector) cls.newInstance();
-    }
-    catch(Exception ex) {
+    } catch (Exception ex) {
       throw new TestNGException("Couldn't find method selector : " + selector.getClassName(), ex);
     }
   }
 
-  /**
-   * Create an instance for the given class.
-   */
-  public static Object createInstance(Class<?> declaringClass,
+  /** Create an instance for the given class. */
+  public static Object createInstance(
+      Class<?> declaringClass,
       Map<Class<?>, IClass> classes,
       XmlTest xmlTest,
       IAnnotationFinder finder,
-      ITestObjectFactory objectFactory)
-  {
+      ITestObjectFactory objectFactory,
+      boolean create
+  ) {
     if (objectFactory instanceof IObjectFactory) {
-      return createInstance1(declaringClass, classes, xmlTest, finder,
-          (IObjectFactory) objectFactory);
+      return createInstance1(
+          declaringClass, classes, xmlTest, finder, (IObjectFactory) objectFactory, create);
     } else if (objectFactory instanceof IObjectFactory2) {
       return createInstance2(declaringClass, (IObjectFactory2) objectFactory);
     } else {
@@ -346,148 +346,148 @@ public final class ClassHelper {
     return objectFactory.newInstance(declaringClass);
   }
 
-  public static Object createInstance1(Class<?> declaringClass,
-                                      Map<Class<?>, IClass> classes,
-                                      XmlTest xmlTest,
-                                      IAnnotationFinder finder,
-                                      IObjectFactory objectFactory) {
+  public static Object createInstance1(
+      Class<?> declaringClass,
+      Map<Class<?>, IClass> classes,
+      XmlTest xmlTest,
+      IAnnotationFinder finder,
+      IObjectFactory factory,
+      boolean create
+  ) {
     Object result = null;
 
     try {
-
-      //
-      // Any annotated constructor?
-      //
       Constructor<?> constructor = findAnnotatedConstructor(finder, declaringClass);
       if (null != constructor) {
-        IParametersAnnotation parametersAnnotation = finder.findAnnotation(constructor, IParametersAnnotation.class);
-        if (parametersAnnotation != null) { // null if the annotation is @Factory
-          String[] parameterNames = parametersAnnotation.getValue();
-          Object[] parameters = Parameters.createInstantiationParameters(constructor,
-                  "@Parameters",
-                  finder,
-                  parameterNames,
-                  xmlTest.getAllParameters(),
-                  xmlTest.getSuite());
-          result = objectFactory.newInstance(constructor, parameters);
-        }
-      }
-
-      //
-      // No, just try to instantiate the parameterless constructor (or the one
-      // with a String)
-      //
-      else {
-
-        // If this class is a (non-static) nested class, the constructor contains a hidden
-        // parameter of the type of the enclosing class
-        Class<?>[] parameterTypes = new Class[0];
-        Object[] parameters = new Object[0];
-        Class<?> ec = getEnclosingClass(declaringClass);
-        boolean isStatic = 0 != (declaringClass.getModifiers() & Modifier.STATIC);
-
-        // Only add the extra parameter if the nested class is not static
-        if ((null != ec) && !isStatic) {
-          parameterTypes = new Class[] { ec };
-
-          // Create an instance of the enclosing class so we can instantiate
-          // the nested class (actually, we reuse the existing instance).
-          IClass enclosingIClass = classes.get(ec);
-          Object[] enclosingInstances;
-          if (null != enclosingIClass) {
-            enclosingInstances = enclosingIClass.getInstances(false);
-            if ((null == enclosingInstances) || (enclosingInstances.length == 0)) {
-              Object o = objectFactory.newInstance(ec.getConstructor(parameterTypes));
-              enclosingIClass.addInstance(o);
-              enclosingInstances = new Object[] { o };
-            }
-          }
-          else {
-            enclosingInstances = new Object[] { ec.newInstance() };
-          }
-          Object enclosingClassInstance = enclosingInstances[0];
-
-          parameters = new Object[] { enclosingClassInstance };
-        } // isStatic
-
-        Constructor<?> ct;
+      // Any annotated constructor?
         try {
-          ct = declaringClass.getDeclaredConstructor(parameterTypes);
+          result = instantiateUsingParameterizedConstructor(finder, constructor, xmlTest, factory);
+        } catch(IllegalArgumentException e) {
+          return null;
         }
-        catch (NoSuchMethodException ex) {
-          ct = declaringClass.getDeclaredConstructor(String.class);
-          parameters = new Object[] { xmlTest.getName() };
-          // If ct == null here, we'll pass a null
-          // constructor to the factory and hope it can deal with it
-        }
-        result = objectFactory.newInstance(ct, parameters);
+      } else {
+        // No, just try to instantiate the parameterless constructor (or the one with a String)
+        result = instantiateUsingDefaultConstructor(declaringClass, classes, xmlTest, factory);
       }
-    }
-    catch (TestNGException ex) {
+    } catch (TestNGException ex) {
       throw ex;
-    }
-    catch (NoSuchMethodException ex) {
-      //Empty catch block
-    }
-    catch (Throwable cause) {
+    } catch (NoSuchMethodException ex) {
+      // Empty catch block
+    } catch (Throwable cause) {
       // Something else went wrong when running the constructor
-      throw new TestNGException("An error occurred while instantiating class "
-          + declaringClass.getName() + ": " + cause.getMessage(), cause);
+      throw new TestNGException(
+          "An error occurred while instantiating class "
+              + declaringClass.getName() + ": " + cause.getMessage(), cause);
     }
 
-    if (result == null && ! Modifier.isPublic(declaringClass.getModifiers())) {
-      //result should not be null
-      throw new TestNGException("An error occurred while instantiating class "
-          + declaringClass.getName() + ". Check to make sure it can be accessed/instantiated.");
+    if (result == null && create) {
+      String suffix = "instantiated";
+      if (!Modifier.isPublic(declaringClass.getModifiers())) {
+        suffix += "/accessed.";
+      }
+      throw new TestNGException("An error occurred while instantiating class " + declaringClass.getName() + ". "
+              + "Check to make sure it can be " + suffix);
     }
 
     return result;
   }
 
-  /**
-   * Class.getEnclosingClass() only exists on JDK5, so reimplementing it
-   * here.
-   */
-  private static Class<?> getEnclosingClass(Class<?> declaringClass) {
-    Class<?> result = null;
-
-    String className = declaringClass.getName();
-    int index = className.indexOf('$');
-    if (index != -1) {
-      String ecn = className.substring(0, index);
-      try {
-        result = Class.forName(ecn);
-      }
-      catch (ClassNotFoundException e) {
-        Logger.getLogger(ClassHelper.class).error(e.getMessage(),e);
-      }
+  private static Object instantiateUsingParameterizedConstructor(IAnnotationFinder finder,
+      Constructor<?> constructor, XmlTest xmlTest, IObjectFactory objectFactory) {
+    IFactoryAnnotation factoryAnnotation = finder
+        .findAnnotation(constructor, IFactoryAnnotation.class);
+    if (factoryAnnotation != null) {
+      throw new IllegalArgumentException("No factory annotation found.");
     }
 
-    return result;
+    IParametersAnnotation parametersAnnotation =
+        finder.findAnnotation(constructor, IParametersAnnotation.class);
+    if (parametersAnnotation == null) {
+      // null if the annotation is @Factory
+      return null;
+    }
+    String[] parameterNames = parametersAnnotation.getValue();
+    Object[] parameters =
+        Parameters.createInstantiationParameters(
+            constructor,
+            "@Parameters",
+            finder,
+            parameterNames,
+            xmlTest.getAllParameters(),
+            xmlTest.getSuite());
+    return objectFactory.newInstance(constructor, parameters);
   }
 
-  /**
-   * Find the best constructor given the parameters found on the annotation
-   */
-  private static Constructor<?> findAnnotatedConstructor(IAnnotationFinder finder,
-                                                      Class<?> declaringClass) {
+
+  private static Object instantiateUsingDefaultConstructor(Class<?> declaringClass,
+      Map<Class<?>, IClass> classes, XmlTest xmlTest, IObjectFactory factory)
+      throws NoSuchMethodException, IllegalAccessException, InstantiationException {
+    // If this class is a (non-static) nested class, the constructor contains a hidden
+    // parameter of the type of the enclosing class
+    Class<?>[] parameterTypes = new Class[0];
+    Object[] parameters = new Object[0];
+    Class<?> ec = declaringClass.getEnclosingClass();
+    boolean isStatic = 0 != (declaringClass.getModifiers() & Modifier.STATIC);
+
+    // Only add the extra parameter if the nested class is not static
+    if ((null != ec) && !isStatic) {
+      parameterTypes = new Class[] {ec};
+      parameters = new Object[]{computeParameters(classes, ec, factory)};
+    } // isStatic
+
+    Constructor<?> ct;
+    try {
+      ct = declaringClass.getDeclaredConstructor(parameterTypes);
+    } catch (NoSuchMethodException ex) {
+      ct = declaringClass.getDeclaredConstructor(String.class);
+      parameters = new Object[]{xmlTest.getName()};
+      // If ct == null here, we'll pass a null
+      // constructor to the factory and hope it can deal with it
+    }
+    return factory.newInstance(ct, parameters);
+  }
+
+  private static Object computeParameters(Map<Class<?>, IClass> classes,
+      Class<?> ec, IObjectFactory factory)
+      throws NoSuchMethodException, IllegalAccessException, InstantiationException {
+    // Create an instance of the enclosing class so we can instantiate
+    // the nested class (actually, we reuse the existing instance).
+    IClass enclosingIClass = classes.get(ec);
+    if (enclosingIClass == null) {
+      return ec.newInstance();
+    }
+    Object[] enclosingInstances = enclosingIClass.getInstances(false);
+    if (enclosingInstances == null || enclosingInstances.length == 0) {
+      return factory.newInstance(ec.getConstructor(ec));
+    }
+    return enclosingInstances[0];
+  }
+
+  /** Find the best constructor given the parameters found on the annotation */
+  private static Constructor<?> findAnnotatedConstructor(
+      IAnnotationFinder finder, Class<?> declaringClass) {
     Constructor<?>[] constructors = declaringClass.getDeclaredConstructors();
 
     for (Constructor<?> result : constructors) {
-      IParametersAnnotation parametersAnnotation = finder.findAnnotation(result, IParametersAnnotation.class);
+      IParametersAnnotation parametersAnnotation =
+          finder.findAnnotation(result, IParametersAnnotation.class);
       if (parametersAnnotation != null) {
         String[] parameters = parametersAnnotation.getValue();
         Class<?>[] parameterTypes = result.getParameterTypes();
         if (parameters.length != parameterTypes.length) {
-          throw new TestNGException("Parameter count mismatch:  " + result + "\naccepts "
-                                    + parameterTypes.length
-                                    + " parameters but the @Test annotation declares "
-                                    + parameters.length);
+          throw new TestNGException(
+              "Parameter count mismatch:  "
+                  + result
+                  + "\naccepts "
+                  + parameterTypes.length
+                  + " parameters but the @Test annotation declares "
+                  + parameters.length);
         }
         return result;
       }
 
-      IFactoryAnnotation factoryAnnotation = finder.findAnnotation(result, IFactoryAnnotation.class);
+      IFactoryAnnotation factoryAnnotation =
+          finder.findAnnotation(result, IFactoryAnnotation.class);
       if (factoryAnnotation != null) {
         return result;
       }
@@ -506,39 +506,39 @@ public final class ClassHelper {
 
       Constructor<T> ctor = declaringClass.getConstructor(String.class);
       result = ctor.newInstance("Default test name");
-    }
-    catch (Exception e) {
+    } catch (Exception e) {
       String message = e.getMessage();
       if ((message == null) && (e.getCause() != null)) {
         message = e.getCause().getMessage();
       }
-      String error = "Could not create an instance of class " + declaringClass
-      + ((message != null) ? (": " + message) : "")
-        + ".\nPlease make sure it has a constructor that accepts either a String or no parameter.";
+      String error =
+          "Could not create an instance of class "
+              + declaringClass
+              + ((message != null) ? (": " + message) : "")
+              + ".\nPlease make sure it has a constructor that accepts either a String or no parameter.";
       throw new TestNGException(error);
     }
 
     return result;
   }
 
-
   /**
-   * Returns the Class object corresponding to the given name. The name may be
-   * of the following form:
+   * Returns the Class object corresponding to the given name. The name may be of the following
+   * form:
+   *
    * <ul>
-   * <li>A class name: "org.testng.TestNG"</li>
-   * <li>A class file name: "/testng/src/org/testng/TestNG.class"</li>
-   * <li>A class source name: "d:\testng\src\org\testng\TestNG.java"</li>
+   *   <li>A class name: "org.testng.TestNG"
+   *   <li>A class file name: "/testng/src/org/testng/TestNG.class"
+   *   <li>A class source name: "d:\testng\src\org\testng\TestNG.java"
    * </ul>
    *
-   * @param file
-   *          the class name.
+   * @param file the class name.
    * @return the class corresponding to the name specified.
    */
   public static Class<?> fileToClass(String file) {
     Class<?> result = null;
 
-    if(!file.endsWith(".class") && !file.endsWith(".java")) {
+    if (!file.endsWith(".class") && !file.endsWith(".java")) {
       // Doesn't end in .java or .class, assume it's a class name
 
       if (file.startsWith("class ")) {
@@ -598,9 +598,8 @@ public final class ClassHelper {
     for (int i = segments.length - 1; i >= 0; i--) {
       if (className.length() == 0) {
         className = segments[i];
-      }
-      else {
-        className = segments[i] + "."  + className;
+      } else {
+        className = segments[i] + "." + className;
       }
 
       result = ClassHelper.forName(className);
@@ -619,7 +618,7 @@ public final class ClassHelper {
   }
 
   /**
-   * @param cls   - The class to look for.
+   * @param cls - The class to look for.
    * @param suite - The {@link XmlSuite} whose &lt;test&gt; tags needs to be searched in.
    * @return - All the {@link XmlClass} objects that share the same &lt;test&gt; tag as the class.
    */
@@ -629,7 +628,7 @@ public final class ClassHelper {
       vResult.addAll(findClassesInSameTest(cls, test));
     }
 
-    return vResult.toArray(new XmlClass[vResult.size()]);
+    return vResult.toArray(new XmlClass[0]);
   }
 
   private static Collection<XmlClass> findClassesInSameTest(Class<?> cls, XmlTest xmlTest) {
@@ -645,5 +644,4 @@ public final class ClassHelper {
 
     return vResult;
   }
-
 }

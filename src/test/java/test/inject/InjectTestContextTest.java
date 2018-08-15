@@ -7,7 +7,6 @@ import org.testng.TestNG;
 import org.testng.annotations.Parameters;
 import org.testng.annotations.Test;
 import org.testng.xml.XmlTest;
-
 import test.SimpleBaseTest;
 
 public class InjectTestContextTest extends SimpleBaseTest {
@@ -26,7 +25,7 @@ public class InjectTestContextTest extends SimpleBaseTest {
   }
 
   @Parameters("string")
-  @Test(enabled = true)
+  @Test
   public void injectionAndParameters(String s, ITestContext ctx) {
   }
 }

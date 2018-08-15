@@ -2,19 +2,22 @@ package org.testng.internal.annotations;
 
 import org.testng.annotations.IConfigurationAnnotation;
 
-
 /**
  * An implementation of IConfiguration
- *
- * Created on Dec 16, 2005
- * @author cbeust
  */
-public class ConfigurationAnnotation extends TestOrConfiguration implements IConfigurationAnnotation,
-    IBeforeSuite, IAfterSuite,
-    IBeforeTest, IAfterTest,
-    IBeforeGroups, IAfterGroups,
-    IBeforeClass, IAfterClass,
-    IBeforeMethod, IAfterMethod {
+public class ConfigurationAnnotation extends TestOrConfiguration
+    implements IConfigurationAnnotation,
+        IBeforeSuite,
+        IAfterSuite,
+        IBeforeTest,
+        IAfterTest,
+        IBeforeGroups,
+        IAfterGroups,
+        IBeforeClass,
+        IAfterClass,
+        IBeforeMethod,
+        IAfterMethod {
+
   private boolean m_beforeTestClass = false;
   private boolean m_afterTestClass = false;
   private boolean m_beforeTestMethod = false;
@@ -23,18 +26,16 @@ public class ConfigurationAnnotation extends TestOrConfiguration implements ICon
   private boolean m_afterTest = false;
   private boolean m_beforeSuite = false;
   private boolean m_afterSuite = false;
-  private String[] m_parameters = {};
   private boolean m_alwaysRun = false;
   private boolean m_inheritGroups = true;
   private String[] m_beforeGroups = {};
   private String[] m_afterGroups = {};
+  private String[] m_groupFilters = {};
   private boolean m_isFakeConfiguration;
   private boolean m_firstTimeOnly = false;
   private boolean m_lastTimeOnly = false;
 
-  public ConfigurationAnnotation() {
-
-  }
+  public ConfigurationAnnotation() {}
 
   public void setAfterSuite(boolean afterSuite) {
     m_afterSuite = afterSuite;
@@ -74,11 +75,6 @@ public class ConfigurationAnnotation extends TestOrConfiguration implements ICon
 
   public void setInheritGroups(boolean inheritGroups) {
     m_inheritGroups = inheritGroups;
-  }
-
-  @Override
-  public void setParameters(String[] parameters) {
-    m_parameters = parameters;
   }
 
   @Override
@@ -122,11 +118,6 @@ public class ConfigurationAnnotation extends TestOrConfiguration implements ICon
   }
 
   @Override
-  public String[] getParameters() {
-    return m_parameters;
-  }
-
-  @Override
   public boolean getAlwaysRun() {
     return m_alwaysRun;
   }
@@ -152,6 +143,15 @@ public class ConfigurationAnnotation extends TestOrConfiguration implements ICon
 
   public void setBeforeGroups(String[] beforeGroups) {
     m_beforeGroups = beforeGroups;
+  }
+
+  @Override
+  public String[] getGroupFilters() {
+    return m_groupFilters;
+  }
+
+  void setGroupFilters(String[] groupFilters) {
+    m_groupFilters = groupFilters;
   }
 
   public void setFakeConfiguration(boolean b) {

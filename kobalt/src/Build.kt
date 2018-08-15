@@ -15,7 +15,7 @@ import org.apache.maven.model.Model
 import org.apache.maven.model.Scm
 import java.io.File
 
-val VERSION = "6.13.1"
+val VERSION = "7.0.0-SNAPSHOT"
 
 val p = project {
     name = "testng"
@@ -52,20 +52,25 @@ val p = project {
     }
 
     dependencies {
-        provided("com.google.inject:guice:4.1.0")
-        compile("com.beust:jcommander:1.72")
+        provided("com.google.inject:guice:4.1.0",
+                "com.google.code.findbugs:jsr305:3.0.1"
+                )
+        compile("com.beust:jcommander:1.72"
+                )
         provided("org.yaml:snakeyaml:1.17",
-                "com.google.code.findbugs:jsr305:3.0.1",
-                "org.apache-extras.beanshell:bsh:2.0b6",
                 "org.apache.ant:ant:1.9.7",
                 "junit:junit:4.12")
     }
 
     dependenciesTest {
-        compile("org.assertj:assertj-core:3.5.2",
+        compile("org.assertj:assertj-core:3.10.0",
                 "org.testng:testng:6.9.13.7",
                 "org.mockito:mockito-core:2.12.0",
-                "org.spockframework:spock-core:1.0-groovy-2.4")
+                "org.codehaus.groovy:groovy-all:2.4.7",
+                "org.spockframework:spock-core:1.0-groovy-2.4",
+                "org.apache-extras.beanshell:bsh:2.0b6",
+                "org.jboss.shrinkwrap:shrinkwrap-api:1.2.6",
+                "org.jboss.shrinkwrap:shrinkwrap-impl-base:1.2.6")
     }
 
     test {
@@ -73,7 +78,7 @@ val p = project {
     }
 
     javaCompiler {
-        args("-target", "1.7", "-source", "1.7", "-encoding", "UTF-8")
+        args("-target", "1.8", "-source", "1.8", "-encoding", "UTF-8")
     }
 
     assemble {

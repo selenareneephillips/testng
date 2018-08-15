@@ -2,11 +2,8 @@ package org.testng.internal.annotations;
 
 import org.testng.annotations.ITestOrConfiguration;
 
-public class TestOrConfiguration
-  extends BaseAnnotation
-  implements ITestOrConfiguration
-{
-  private String[] m_parameters = {};
+public class TestOrConfiguration extends BaseAnnotation implements ITestOrConfiguration {
+
   private String[] m_groups = {};
   private boolean m_enabled = true;
   private String[] m_dependsOnGroups = {};
@@ -58,15 +55,6 @@ public class TestOrConfiguration
   @Override
   public String[] getDependsOnMethods() {
     return m_dependsOnMethods;
-  }
-
-  @Override
-  public String[] getParameters() {
-    return m_parameters;
-  }
-
-  public void setParameters(String[] parameters) {
-    m_parameters = parameters;
   }
 
   @Override

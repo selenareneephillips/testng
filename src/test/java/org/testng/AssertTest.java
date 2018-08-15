@@ -164,16 +164,68 @@ public class AssertTest {
 
   @Test
   public void compareFloatArrays() {
-    float[] actual = {(float) Math.PI, (float) Math.E};
-    float[] expected = {(float) Math.PI, (float) Math.E};
+    float[] actual = {(float) Math.PI, (float) Math.E, Float.MIN_VALUE, Float.MIN_NORMAL, Float.MAX_VALUE,
+            Float.POSITIVE_INFINITY, Float.NEGATIVE_INFINITY};
+    float[] expected = {(float) Math.PI, (float) Math.E, Float.MIN_VALUE, Float.MIN_NORMAL, Float.MAX_VALUE,
+            Float.POSITIVE_INFINITY, Float.NEGATIVE_INFINITY};
     Assert.assertEquals(actual, expected);
   }
 
   @Test
+  public void compareFloatArraysWithDelta() {
+    float[] actual = {0.1f, 0.2f, 0.3f, 0.4f};
+    float[] expected = {0.5f, 0.7f, 0.1f, 0.2f};
+    Assert.assertEquals(actual, expected, 0.5f);
+  }
+
+  @Test(expectedExceptions = AssertionError.class)
+  public void compareUnEqualFloatArraysWithDelta() {
+    float[] actual = {0.1f, 0.2f, 0.3f, 0.4f};
+    float[] expected = {0.5f, 0.7f, 0.1f, 0.2f};
+    Assert.assertEquals(actual, expected, 0.1f);
+  }
+
+  @Test
+  public void compareFloatArraysWithNaNValues() {
+    Assert.assertEquals(new float[] { Float.NaN }, new float[] { Float.NaN });
+  }
+
+  @Test
+  public void compareFloatWithNaNValues() {
+    Assert.assertEquals((float) Float.NaN ,(float) Float.NaN);
+  }
+
+  @Test
   public void compareDoubleArrays() {
-    double[] actual = {Math.PI, Math.E};
-    double[] expected = {Math.PI, Math.E};
+    double[] actual = {Math.PI, Math.E, Double.MIN_VALUE, Double.MIN_NORMAL, Double.MAX_VALUE,
+            Double.POSITIVE_INFINITY, Double.NEGATIVE_INFINITY};
+    double[] expected = {Math.PI, Math.E, Double.MIN_VALUE, Double.MIN_NORMAL, Double.MAX_VALUE,
+            Double.POSITIVE_INFINITY, Double.NEGATIVE_INFINITY};
     Assert.assertEquals(actual, expected);
+  }
+
+  @Test
+  public void compareDoubleArraysWithNaNValues() {
+    Assert.assertEquals(new double[] { Double.NaN }, new double[] { Double.NaN });
+  }
+
+  @Test
+  public void compareDoubleWithNaNValues() {
+    Assert.assertEquals( (double) Double.NaN , (double) Double.NaN);
+  }
+
+  @Test
+  public void compareDoubleArraysWithDelta() {
+    double[] actual = {0.1d, 0.2d, 0.3d, 0.4d};
+    double[] expected = {0.5d, 0.7d, 0.1d, 0.2d};
+    Assert.assertEquals(actual, expected, 0.5d);
+  }
+
+  @Test(expectedExceptions = AssertionError.class)
+  public void compareUnEqualDoubleArraysWithDelta() {
+    double[] actual = {0.1d, 0.2d, 0.3d, 0.4d};
+    double[] expected = {0.5d, 0.7d, 0.1d, 0.2d};
+    Assert.assertEquals(actual, expected, 0.1d);
   }
 
   @Test(expectedExceptions = AssertionError.class)

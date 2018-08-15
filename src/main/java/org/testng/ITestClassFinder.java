@@ -7,18 +7,13 @@ package org.testng;
  */
 public interface ITestClassFinder {
   /**
-   * @return An array of all the classes that contain test
-   * methods.  This method usually returns an array of one
-   * class, which is the class on which TestNG is running,
-   * except in the following cases.
-   * - TestNG:  the class contains an @Factory method
-   * - JUnit:  the class contains a suite() method
+   * @return An array of all the classes that contain test methods. This method usually returns an
+   *     array of one class, which is the class on which TestNG is running, except in the following
+   *     cases. - TestNG: the class contains an @Factory method - JUnit: the class contains a
+   *     suite() method
    */
   IClass[] findTestClasses();
 
-  /**
-   * Return the IClass for a given class
-   */
+  /** Return the IClass for a given class */
   IClass getIClass(Class<?> cls);
-
 }

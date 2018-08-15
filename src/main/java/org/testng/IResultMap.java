@@ -18,5 +18,4 @@ public interface IResultMap {
   Collection<ITestNGMethod> getAllMethods();
 
   int size();
-
 }

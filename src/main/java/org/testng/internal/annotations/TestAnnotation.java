@@ -2,15 +2,13 @@ package org.testng.internal.annotations;
 
 import org.testng.IRetryAnalyzer;
 import org.testng.annotations.ITestAnnotation;
-
+import org.testng.internal.ClassHelper;
 
 /**
  * An implementation of ITest
- *
- * Created on Dec 20, 2005
- * @author <a href="mailto:cedric@beust.com">Cedric Beust</a>
  */
 public class TestAnnotation extends TestOrConfiguration implements ITestAnnotation {
+
   private long m_invocationTimeOut = 0;
   private int m_invocationCount = 1;
   private int m_threadPoolSize = 0;
@@ -22,23 +20,18 @@ public class TestAnnotation extends TestOrConfiguration implements ITestAnnotati
   private String m_suiteName = "";
   private String m_testName = "";
   private boolean m_singleThreaded = false;
-  private boolean m_sequential = false;
   private Class<?> m_dataProviderClass = null;
   private IRetryAnalyzer m_retryAnalyzer = null;
   private boolean m_skipFailedInvocations = false;
   private boolean m_ignoreMissingDependencies = false;
 
-  /**
-   * @return the expectedExceptions
-   */
+  /** @return the expectedExceptions */
   @Override
   public Class<?>[] getExpectedExceptions() {
     return m_expectedExceptions;
   }
 
-  /**
-   * @param expectedExceptions the expectedExceptions to set
-   */
+  /** @param expectedExceptions the expectedExceptions to set */
   @Override
   public void setExpectedExceptions(Class<?>[] expectedExceptions) {
     m_expectedExceptions = expectedExceptions;
@@ -50,8 +43,7 @@ public class TestAnnotation extends TestOrConfiguration implements ITestAnnotati
   }
 
   @Override
-  public void setExpectedExceptionsMessageRegExp(
-      String expectedExceptionsMessageRegExp) {
+  public void setExpectedExceptionsMessageRegExp(String expectedExceptionsMessageRegExp) {
     m_expectedExceptionsMessageRegExp = expectedExceptionsMessageRegExp;
   }
 
@@ -92,14 +84,13 @@ public class TestAnnotation extends TestOrConfiguration implements ITestAnnotati
 
   @Override
   public long invocationTimeOut() {
-   return m_invocationTimeOut;
+    return m_invocationTimeOut;
   }
 
   @Override
   public void setInvocationTimeOut(long timeOut) {
     m_invocationTimeOut = timeOut;
   }
-
 
   @Override
   public int getSuccessPercentage() {
@@ -157,31 +148,14 @@ public class TestAnnotation extends TestOrConfiguration implements ITestAnnotati
   }
 
   @Override
-  public boolean getSequential() {
-    return m_sequential;
-  }
-
-  @Override
-  public void setSequential(boolean sequential) {
-    m_sequential = sequential;
-  }
-
-  @Override
   public IRetryAnalyzer getRetryAnalyzer() {
     return m_retryAnalyzer;
   }
 
   @Override
-  public void setRetryAnalyzer(Class<?> c) {
-    m_retryAnalyzer = null;
-
-    if (c != null && IRetryAnalyzer.class.isAssignableFrom(c)) {
-      try {
-        m_retryAnalyzer = (IRetryAnalyzer) c.newInstance();
-      }
-      catch (InstantiationException | IllegalAccessException e) {
-        // The class will never be called.
-      }
+  public void setRetryAnalyzer(Class<? extends IRetryAnalyzer> c) {
+    if (isRetryAnalyzerNotTestNGInjected(c)) {
+      m_retryAnalyzer = ClassHelper.newInstance(c);
     }
   }
 
@@ -203,5 +177,9 @@ public class TestAnnotation extends TestOrConfiguration implements ITestAnnotati
   @Override
   public boolean ignoreMissingDependencies() {
     return m_ignoreMissingDependencies;
+  }
+
+  private static boolean isRetryAnalyzerNotTestNGInjected(Class<? extends IRetryAnalyzer> c) {
+    return !DisabledRetryAnalyzer.class.equals(c);
   }
 }

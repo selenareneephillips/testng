@@ -9,6 +9,7 @@ import org.testng.ITestObjectFactory;
 import org.testng.TestNG;
 import org.testng.collections.Lists;
 import org.testng.collections.Maps;
+import org.testng.internal.RuntimeBehavior;
 import org.testng.internal.Utils;
 import org.testng.xml.dom.OnElement;
 import org.testng.xml.dom.OnElementList;
@@ -16,14 +17,19 @@ import org.testng.xml.dom.Tag;
 
 import static org.testng.xml.XmlSuite.ParallelMode.skipDeprecatedValues;
 
-/**
- * This class describes the tag &lt;suite&gt; in testng.xml.
- */
+/** This class describes the tag &lt;suite&gt; in testng.xml. */
 public class XmlSuite implements Cloneable {
   /** Parallel modes */
   public enum ParallelMode {
-    TESTS("tests", false), METHODS("methods"), CLASSES("classes"), INSTANCES("instances"), NONE("none", false),
-    @Deprecated TRUE("true"), @Deprecated FALSE("false", false);
+    TESTS("tests", false),
+    METHODS("methods"),
+    CLASSES("classes"),
+    INSTANCES("instances"),
+    NONE("none", false),
+    @Deprecated
+    TRUE("true"),
+    @Deprecated
+    FALSE("false", false);
 
     private final String name;
     private final boolean isParallel;
@@ -50,12 +56,22 @@ public class XmlSuite implements Cloneable {
 
     public static ParallelMode skipDeprecatedValues(ParallelMode parallel) {
       if (parallel == ParallelMode.TRUE) {
-        Utils.log("XmlSuite", 1, "[WARN] 'parallel' value 'true' is deprecated, default value will be used instead: '" + ParallelMode.METHODS + "'.");
+        Utils.log(
+            "XmlSuite",
+            1,
+            "[WARN] 'parallel' value 'true' is deprecated, default value will be used instead: '"
+                + ParallelMode.METHODS
+                + "'.");
         return ParallelMode.METHODS;
       }
 
       if (parallel == ParallelMode.FALSE) {
-        Utils.log("XmlSuite", 1, "[WARN] 'parallel' value 'false' is deprecated, default value will be used instead: '" + ParallelMode.NONE + "'.");
+        Utils.log(
+            "XmlSuite",
+            1,
+            "[WARN] 'parallel' value 'false' is deprecated, default value will be used instead: '"
+                + ParallelMode.NONE
+                + "'.");
         return ParallelMode.NONE;
       }
 
@@ -74,7 +90,8 @@ public class XmlSuite implements Cloneable {
 
   /** Configuration failure policy options */
   public enum FailurePolicy {
-    SKIP("skip"), CONTINUE("continue");
+    SKIP("skip"),
+    CONTINUE("continue");
 
     private final String name;
 
@@ -107,8 +124,9 @@ public class XmlSuite implements Cloneable {
   /** The suite name (defaults to DEFAULT_SUITE_NAME) */
   private String m_name = DEFAULT_SUITE_NAME;
 
-  /** The suite verbose flag. (0 to 10)*/
+  /** The suite verbose flag. (0 to 10) */
   public static final Integer DEFAULT_VERBOSE = 1;
+
   private Integer m_verbose = null;
 
   public static final ParallelMode DEFAULT_PARALLEL = ParallelMode.NONE;
@@ -119,10 +137,12 @@ public class XmlSuite implements Cloneable {
 
   /** Whether to SKIP or CONTINUE to re-attempt failed configuration methods. */
   public static final FailurePolicy DEFAULT_CONFIG_FAILURE_POLICY = FailurePolicy.SKIP;
+
   private FailurePolicy m_configFailurePolicy = DEFAULT_CONFIG_FAILURE_POLICY;
 
   /** JUnit compatibility flag. */
   public static final Boolean DEFAULT_JUNIT = Boolean.FALSE;
+
   private Boolean m_isJUnit = DEFAULT_JUNIT;
 
   /** mixed mode flag. */
@@ -133,14 +153,17 @@ public class XmlSuite implements Cloneable {
 
   /** The thread count. */
   public static final Integer DEFAULT_THREAD_COUNT = 5;
+
   private int m_threadCount = DEFAULT_THREAD_COUNT;
 
   /** Thread count for the data provider pool */
   public static final Integer DEFAULT_DATA_PROVIDER_THREAD_COUNT = 10;
+
   private int m_dataProviderThreadCount = DEFAULT_DATA_PROVIDER_THREAD_COUNT;
 
   /** By default, a method failing will cause all instances of that class to skip */
   public static final Boolean DEFAULT_GROUP_BY_INSTANCES = false;
+
   private Boolean m_groupByInstances = DEFAULT_GROUP_BY_INSTANCES;
 
   public static final Boolean DEFAULT_ALLOW_RETURN_VALUES = Boolean.FALSE;
@@ -148,9 +171,6 @@ public class XmlSuite implements Cloneable {
 
   /** The packages containing test classes. */
   private List<XmlPackage> m_xmlPackages = Lists.newArrayList();
-
-  /** BeanShell expression. */
-  private String m_expression = null;
 
   /** Suite level method selectors. */
   private List<XmlMethodSelector> m_methodSelectors = Lists.newArrayList();
@@ -191,36 +211,29 @@ public class XmlSuite implements Cloneable {
     this.parsed = parsed;
   }
 
-  /**
-   *
-   * @return - <code>true</code> if the current {@link XmlSuite} has already been parsed.
-   */
+  /** @return - <code>true</code> if the current {@link XmlSuite} has already been parsed. */
   public boolean isParsed() {
     return parsed;
   }
 
-  /**
-   * @return the fileName
-   */
+  /** @return the fileName */
   public String getFileName() {
     return m_fileName;
   }
 
-  /**
-   * @param fileName the fileName to set
-   */
+  /** @param fileName the fileName to set */
   public void setFileName(String fileName) {
     m_fileName = fileName;
   }
 
   /**
    * Returns the parallel mode.
+   *
    * @return the parallel mode.
    */
   public ParallelMode getParallel() {
     return m_parallel;
   }
-
 
   public String getParentModule() {
     return m_parentModule;
@@ -238,13 +251,11 @@ public class XmlSuite implements Cloneable {
     m_objectFactory = objectFactory;
   }
 
-  /**
-   * @deprecated Use #setParallel(XmlSuite.ParallelMode) instead
-   */
+  /** @deprecated Use #setParallel(XmlSuite.ParallelMode) instead */
   @Deprecated
   public void setParallel(String parallel) {
     if (parallel == null) {
-      setParallel((ParallelMode)null);
+      setParallel((ParallelMode) null);
     } else {
       setParallel(XmlSuite.ParallelMode.getValidParallel(parallel));
     }
@@ -252,6 +263,7 @@ public class XmlSuite implements Cloneable {
 
   /**
    * Sets the parallel mode
+   *
    * @param parallel the parallel mode
    */
   public void setParallel(ParallelMode parallel) {
@@ -272,6 +284,7 @@ public class XmlSuite implements Cloneable {
 
   /**
    * Sets the configuration failure policy.
+   *
    * @param configFailurePolicy the config failure policy
    */
   public void setConfigFailurePolicy(FailurePolicy configFailurePolicy) {
@@ -280,15 +293,16 @@ public class XmlSuite implements Cloneable {
 
   /**
    * Returns the configuration failure policy.
+   *
    * @return the configuration failure policy
    */
   public FailurePolicy getConfigFailurePolicy() {
     return m_configFailurePolicy;
   }
 
-
   /**
    * Returns the verbose.
+   *
    * @return the verbose.
    */
   public Integer getVerbose() {
@@ -297,6 +311,7 @@ public class XmlSuite implements Cloneable {
 
   /**
    * Set the verbose.
+   *
    * @param verbose The verbose to set.
    */
   public void setVerbose(Integer verbose) {
@@ -305,6 +320,7 @@ public class XmlSuite implements Cloneable {
 
   /**
    * Returns the name.
+   *
    * @return the name.
    */
   public String getName() {
@@ -313,6 +329,7 @@ public class XmlSuite implements Cloneable {
 
   /**
    * Sets the name.
+   *
    * @param name The name to set.
    */
   public void setName(String name) {
@@ -321,6 +338,7 @@ public class XmlSuite implements Cloneable {
 
   /**
    * Returns the test.
+   *
    * @return the test.
    */
   public String getTest() {
@@ -329,6 +347,7 @@ public class XmlSuite implements Cloneable {
 
   /**
    * Returns the tests.
+   *
    * @return the tests.
    */
   public List<XmlTest> getTests() {
@@ -364,11 +383,10 @@ public class XmlSuite implements Cloneable {
   }
 
   /**
-   * Updates the list of parameters that apply to this XML suite. This method
-   * should be invoked any time there is a change in the state of this suite that
-   * would affect the parameter list.<br>
-   * NOTE: Currently being invoked after a parent suite is added or if parameters
-   * for this suite are updated.
+   * Updates the list of parameters that apply to this XML suite. This method should be invoked any
+   * time there is a change in the state of this suite that would affect the parameter list.<br>
+   * NOTE: Currently being invoked after a parent suite is added or if parameters for this suite are
+   * updated.
    */
   private void updateParameters() {
     /*
@@ -380,7 +398,7 @@ public class XmlSuite implements Cloneable {
       Set<String> keySet = m_parentSuite.getParameters().keySet();
       for (String name : keySet) {
         if (!m_parameters.containsKey(name)) {
-           m_parameters.put(name, m_parentSuite.getParameter(name));
+          m_parameters.put(name, m_parentSuite.getParameter(name));
         }
       }
     }
@@ -388,6 +406,7 @@ public class XmlSuite implements Cloneable {
 
   /**
    * Sets parameters.
+   *
    * @param parameters the parameters.
    */
   public void setParameters(Map<String, String> parameters) {
@@ -397,17 +416,14 @@ public class XmlSuite implements Cloneable {
 
   /**
    * Gets the parameters that apply to tests in this suite.<br>
-   * Set of parameters for a suite is appended with parameters from parent suite.
-   * Also, parameters from this suite override the same named parameters from
-   * parent suite.
+   * Set of parameters for a suite is appended with parameters from parent suite. Also, parameters
+   * from this suite override the same named parameters from parent suite.
    */
   public Map<String, String> getParameters() {
     return m_parameters;
   }
 
-  /**
-   * @return The parameters defined in this suite and all its XmlTests.
-   */
+  /** @return The parameters defined in this suite and all its XmlTests. */
   public Map<String, String> getAllParameters() {
     Map<String, String> result = Maps.newHashMap();
     for (Map.Entry<String, String> entry : m_parameters.entrySet()) {
@@ -426,6 +442,7 @@ public class XmlSuite implements Cloneable {
 
   /**
    * Returns the parameter defined in this suite only.
+   *
    * @param name the parameter name.
    * @return The parameter defined in this suite only.
    */
@@ -433,24 +450,21 @@ public class XmlSuite implements Cloneable {
     return m_parameters.get(name);
   }
 
-  /**
-   * @return The threadCount.
-   */
+  /** @return The threadCount. */
   public int getThreadCount() {
     return m_threadCount;
   }
 
   /**
    * Set the thread count.
+   *
    * @param threadCount The thread count to set.
    */
   public void setThreadCount(int threadCount) {
     m_threadCount = threadCount;
   }
 
-  /**
-   * @return The JUnit compatibility flag.
-   */
+  /** @return The JUnit compatibility flag. */
   public Boolean isJUnit() {
     return m_isJUnit;
   }
@@ -495,7 +509,6 @@ public class XmlSuite implements Cloneable {
     return m_xmlPackages;
   }
 
-
   // For YAML
   public List<XmlPackage> getPackages() {
     return getXmlPackages();
@@ -511,17 +524,12 @@ public class XmlSuite implements Cloneable {
     setXmlPackages(packages);
   }
 
-  /**
-   * @return A String representation of this XML suite.
-   */
+  /** @return A String representation of this XML suite. */
   public String toXml() {
     return XmlWeaver.asXml(this);
   }
 
-  /**
-   *
-   * @return - The list of listener names that are local to the current &lt;suite&gt;
-   */
+  /** @return - The list of listener names that are local to the current &lt;suite&gt; */
   public List<String> getLocalListeners() {
     return m_listeners;
   }
@@ -535,15 +543,13 @@ public class XmlSuite implements Cloneable {
     return m_xmlMethodSelectors;
   }
 
-  /**
-   * {@inheritDoc}
-   */
+  /** {@inheritDoc} */
   @Override
   public String toString() {
-    StringBuilder result = new StringBuilder("[Suite: \"").append( m_name).append( "\" ");
+    StringBuilder result = new StringBuilder("[Suite: \"").append(m_name).append("\" ");
 
     for (XmlTest t : m_tests) {
-      result.append("  ").append( t.toString()).append(' ');
+      result.append("  ").append(t.toString()).append(' ');
     }
 
     for (XmlMethodSelector ms : m_methodSelectors) {
@@ -556,8 +562,7 @@ public class XmlSuite implements Cloneable {
   }
 
   /**
-   * {@inheritDoc}
-   * Note that this is not a full clone:  XmlTest children are not cloned by this
+   * {@inheritDoc} Note that this is not a full clone: XmlTest children are not cloned by this
    * method.
    */
   @Override
@@ -579,8 +584,9 @@ public class XmlSuite implements Cloneable {
 
   /**
    * This method returns a shallow cloned version. {@link XmlTest} are not copied by this method.
+   *
    * @return - A Shallow copied version of {@link XmlSuite}.
-     */
+   */
   public XmlSuite shallowCopy() {
     XmlSuite result = new XmlSuite();
     result.setName(getName());
@@ -595,7 +601,6 @@ public class XmlSuite implements Cloneable {
     result.setParameters(getParameters());
     result.setVerbose(getVerbose());
     result.setXmlPackages(getXmlPackages());
-//    result.setBeanShellExpression(getExpression());
     result.setMethodSelectors(getMethodSelectors());
     result.setJUnit(isJUnit()); // TESTNG-141
     result.setSkipFailedInvocationCounts(skipFailedInvocationCounts());
@@ -616,26 +621,27 @@ public class XmlSuite implements Cloneable {
 
   /**
    * Returns the timeout.
+   *
    * @return the timeout.
    */
   public String getTimeOut() {
     return m_timeOut;
   }
-  
+
   /**
-   * Returns the timeout as a long value specifying the default value to be used if
-   * no timeout was specified.
+   * Returns the timeout as a long value specifying the default value to be used if no timeout was
+   * specified.
    *
    * @param def the the default value to be used if no timeout was specified.
-   * @return the timeout as a long value specifying the default value to be used if
-   * no timeout was specified.
+   * @return the timeout as a long value specifying the default value to be used if no timeout was
+   *     specified.
    */
   public long getTimeOut(long def) {
     long result = def;
     if (m_timeOut != null) {
-        result = Long.parseLong(m_timeOut);
+      result = Long.parseLong(m_timeOut);
     }
-    
+
     return result;
   }
 
@@ -647,9 +653,10 @@ public class XmlSuite implements Cloneable {
   public void setSuiteFiles(List<String> files) {
     m_suiteFiles = files;
   }
-  
+
   /**
    * Returns the suite files.
+   *
    * @return the suite files.
    */
   public List<String> getSuiteFiles() {
@@ -665,7 +672,7 @@ public class XmlSuite implements Cloneable {
       List<String> listeners = m_parentSuite.getListeners();
       for (String listener : listeners) {
         if (!m_listeners.contains(listener)) {
-           m_listeners.add(listener);
+          m_listeners.add(listener);
         }
       }
     }
@@ -677,13 +684,13 @@ public class XmlSuite implements Cloneable {
   }
 
   public int getDataProviderThreadCount() {
-    String s = System.getProperty("dataproviderthreadcount");
-    if (s != null) {
-      try {
+    String s = RuntimeBehavior.getDefaultDataProviderThreadCount();
+    try {
+      if (!s.trim().isEmpty()) {
         return Integer.parseInt(s);
-      } catch(NumberFormatException nfe) {
-        System.err.println("Parsing System property 'dataproviderthreadcount': " + nfe);
       }
+    } catch (NumberFormatException nfe) {
+      System.err.println("Parsing System property 'dataproviderthreadcount': " + nfe);
     }
     return m_dataProviderThreadCount;
   }
@@ -705,52 +712,37 @@ public class XmlSuite implements Cloneable {
   public int hashCode() {
     final int prime = 31;
     int result = 1;
-    result = prime
-        * result
-        + ((m_configFailurePolicy == null) ? 0 : m_configFailurePolicy
-            .hashCode());
+    result =
+        prime * result + ((m_configFailurePolicy == null) ? 0 : m_configFailurePolicy.hashCode());
     result = prime * result + m_dataProviderThreadCount;
-    result = prime * result
-        + ((m_expression == null) ? 0 : m_expression.hashCode());
-    result = prime * result
-        + ((m_fileName == null) ? 0 : m_fileName.hashCode());
-    result = prime * result
-        + ((m_isJUnit == null) ? 0 : m_isJUnit.hashCode());
-    result = prime * result
-        + ((m_listeners == null) ? 0 : m_listeners.hashCode());
+    result = prime * result + ((m_fileName == null) ? 0 : m_fileName.hashCode());
+    result = prime * result + ((m_isJUnit == null) ? 0 : m_isJUnit.hashCode());
+    result = prime * result + ((m_listeners == null) ? 0 : m_listeners.hashCode());
 
-    result = prime * result
-        + ((m_methodSelectors == null) ? 0 : m_methodSelectors.hashCode());
+    result = prime * result + ((m_methodSelectors == null) ? 0 : m_methodSelectors.hashCode());
     result = prime * result + ((m_name == null) ? 0 : m_name.hashCode());
-    result = prime * result
-        + ((m_objectFactory == null) ? 0 : m_objectFactory.hashCode());
-    result = prime * result
-        + ((m_parallel == null) ? 0 : m_parallel.hashCode());
-//    result = prime * result
-//        + ((m_parameters == null) ? 0 : m_parameters.hashCode());
-//      result = prime * result
-//          + ((m_parentSuite == null) ? 0 : m_parentSuite.hashCode());
-    result = prime
-        * result
-        + ((m_skipFailedInvocationCounts == null) ? 0
-            : m_skipFailedInvocationCounts.hashCode());
-    result = prime * result
-        + ((m_suiteFiles == null) ? 0 : m_suiteFiles.hashCode());
+    result = prime * result + ((m_objectFactory == null) ? 0 : m_objectFactory.hashCode());
+    result = prime * result + ((m_parallel == null) ? 0 : m_parallel.hashCode());
+    //    result = prime * result
+    //        + ((m_parameters == null) ? 0 : m_parameters.hashCode());
+    //      result = prime * result
+    //          + ((m_parentSuite == null) ? 0 : m_parentSuite.hashCode());
+    result =
+        prime * result
+            + ((m_skipFailedInvocationCounts == null)
+                ? 0
+                : m_skipFailedInvocationCounts.hashCode());
+    result = prime * result + ((m_suiteFiles == null) ? 0 : m_suiteFiles.hashCode());
     result = prime * result + ((m_test == null) ? 0 : m_test.hashCode());
     result = prime * result + ((m_tests == null) ? 0 : m_tests.hashCode());
     result = prime * result + m_threadCount;
-    result = prime * result
-        + ((m_timeOut == null) ? 0 : m_timeOut.hashCode());
-    result = prime * result
-        + ((m_verbose == null) ? 0 : m_verbose.hashCode());
-    result = prime * result
-        + ((m_xmlPackages == null) ? 0 : m_xmlPackages.hashCode());
+    result = prime * result + ((m_timeOut == null) ? 0 : m_timeOut.hashCode());
+    result = prime * result + ((m_verbose == null) ? 0 : m_verbose.hashCode());
+    result = prime * result + ((m_xmlPackages == null) ? 0 : m_xmlPackages.hashCode());
     return result;
   }
 
-  /**
-   * Used to debug equals() bugs.
-   */
+  /** Used to debug equals() bugs. */
   static boolean f() {
     return false;
   }
@@ -767,11 +759,11 @@ public class XmlSuite implements Cloneable {
       return f();
     }
     XmlSuite other = (XmlSuite) obj;
-//      if (m_childSuites == null) {
-//        if (other.m_childSuites != null)
-//          return f();
-//      } else if (!m_childSuites.equals(other.m_childSuites))
-//        return f();
+    //      if (m_childSuites == null) {
+    //        if (other.m_childSuites != null)
+    //          return f();
+    //      } else if (!m_childSuites.equals(other.m_childSuites))
+    //        return f();
     if (m_configFailurePolicy == null) {
       if (other.m_configFailurePolicy != null) {
         return f();
@@ -780,13 +772,6 @@ public class XmlSuite implements Cloneable {
       return f();
     }
     if (m_dataProviderThreadCount != other.m_dataProviderThreadCount) {
-      return f();
-    }
-    if (m_expression == null) {
-      if (other.m_expression != null) {
-        return f();
-      }
-    } else if (!m_expression.equals(other.m_expression)) {
       return f();
     }
     if (m_isJUnit == null) {
@@ -831,62 +816,44 @@ public class XmlSuite implements Cloneable {
     } else if (!m_parallel.equals(other.m_parallel)) {
       return f();
     }
-//    if (m_parameters == null) {
-//      if (other.m_parameters != null) {
-//        return f();
-//      }
-//    } else if (!m_parameters.equals(other.m_parameters)) {
-//      return f();
-//    }
-//      if (m_parentSuite == null) {
-//        if (other.m_parentSuite != null)
-//          return f();
-//      } else if (!m_parentSuite.equals(other.m_parentSuite))
-//        return f();
+    //    if (m_parameters == null) {
+    //      if (other.m_parameters != null) {
+    //        return f();
+    //      }
+    //    } else if (!m_parameters.equals(other.m_parameters)) {
+    //      return f();
+    //    }
+    //      if (m_parentSuite == null) {
+    //        if (other.m_parentSuite != null)
+    //          return f();
+    //      } else if (!m_parentSuite.equals(other.m_parentSuite))
+    //        return f();
     if (m_skipFailedInvocationCounts == null) {
-      if (other.m_skipFailedInvocationCounts != null)
-        return f();
-    } else if (!m_skipFailedInvocationCounts
-        .equals(other.m_skipFailedInvocationCounts))
-      return f();
+      if (other.m_skipFailedInvocationCounts != null) return f();
+    } else if (!m_skipFailedInvocationCounts.equals(other.m_skipFailedInvocationCounts)) return f();
     if (m_suiteFiles == null) {
-      if (other.m_suiteFiles != null)
-        return f();
-    } else if (!m_suiteFiles.equals(other.m_suiteFiles))
-      return f();
+      if (other.m_suiteFiles != null) return f();
+    } else if (!m_suiteFiles.equals(other.m_suiteFiles)) return f();
     if (m_test == null) {
-      if (other.m_test != null)
-        return f();
-    } else if (!m_test.equals(other.m_test))
-      return f();
+      if (other.m_test != null) return f();
+    } else if (!m_test.equals(other.m_test)) return f();
     if (m_tests == null) {
-      if (other.m_tests != null)
-        return f();
-    } else if (!m_tests.equals(other.m_tests))
-      return f();
-    if (m_threadCount != other.m_threadCount)
-      return f();
+      if (other.m_tests != null) return f();
+    } else if (!m_tests.equals(other.m_tests)) return f();
+    if (m_threadCount != other.m_threadCount) return f();
     if (m_timeOut == null) {
-      if (other.m_timeOut != null)
-        return f();
-    } else if (!m_timeOut.equals(other.m_timeOut))
-      return f();
+      if (other.m_timeOut != null) return f();
+    } else if (!m_timeOut.equals(other.m_timeOut)) return f();
     if (m_verbose == null) {
-      if (other.m_verbose != null)
-        return f();
-    } else if (!m_verbose.equals(other.m_verbose))
-      return f();
+      if (other.m_verbose != null) return f();
+    } else if (!m_verbose.equals(other.m_verbose)) return f();
     if (m_xmlPackages == null) {
-      if (other.m_xmlPackages != null)
-        return f();
-    } else if (!m_xmlPackages.equals(other.m_xmlPackages))
-      return f();
+      if (other.m_xmlPackages != null) return f();
+    } else if (!m_xmlPackages.equals(other.m_xmlPackages)) return f();
     return true;
   }
 
-  /**
-   * @deprecated Use {@link #setPreserveOrder(Boolean)} instead
-   */
+  /** @deprecated Use {@link #setPreserveOrder(Boolean)} instead */
   @Deprecated
   public void setPreserveOrder(String f) {
     setPreserveOrder(Boolean.valueOf(f));
@@ -901,8 +868,8 @@ public class XmlSuite implements Cloneable {
   }
 
   /**
-   * @return Returns the includedGroups.
-   * Note: do not modify the returned value, use {@link #addIncludedGroup(String)}.
+   * @return Returns the includedGroups. Note: do not modify the returned value, use {@link
+   *     #addIncludedGroup(String)}.
    */
   public List<String> getIncludedGroups() {
     if (m_parentSuite != null) {
@@ -919,23 +886,19 @@ public class XmlSuite implements Cloneable {
     m_includedGroups.add(g);
   }
 
-  /**
-   * @param g - The list of groups to include.
-   */
+  /** @param g - The list of groups to include. */
   public void setIncludedGroups(List<String> g) {
     m_includedGroups = g;
   }
 
-  /**
-   * @param g The excludedGrousps to set.
-   */
+  /** @param g The excludedGrousps to set. */
   public void setExcludedGroups(List<String> g) {
     m_excludedGroups = g;
   }
 
   /**
-   * @return Returns the excludedGroups.
-   * Note: do not modify the returned value, use {@link #addExcludedGroup(String)}.
+   * @return Returns the excludedGroups. Note: do not modify the returned value, use {@link
+   *     #addExcludedGroup(String)}.
    */
   public List<String> getExcludedGroups() {
     if (m_parentSuite != null) {
@@ -977,27 +940,35 @@ public class XmlSuite implements Cloneable {
     m_xmlGroups = xmlGroups;
   }
 
-  @OnElement(tag = "parameter", attributes = { "name", "value" })
+  @OnElement(
+      tag = "parameter",
+      attributes = {"name", "value"})
   public void onParameterElement(String name, String value) {
     getParameters().put(name, value);
   }
 
-  @OnElementList(tag = "listeners", attributes = { "class-name" })
+  @OnElementList(
+      tag = "listeners",
+      attributes = {"class-name"})
   public void onListenerElement(String className) {
     addListener(className);
   }
 
-  @OnElementList(tag = "suite-files", attributes = { "path" })
+  @OnElementList(
+      tag = "suite-files",
+      attributes = {"path"})
   public void onSuiteFilesElement(String path) {
     getSuiteFiles().add(path);
   }
 
-  @OnElementList(tag = "packages", attributes = { "name" })
+  @OnElementList(
+      tag = "packages",
+      attributes = {"name"})
   public void onPackagesElement(String name) {
     getPackages().add(new XmlPackage(name));
   }
 
-//  @OnElementList(tag = "method-selectors", attributes = { "language", "name", "priority" })
+  //  @OnElementList(tag = "method-selectors", attributes = { "language", "name", "priority" })
   public void onMethodSelectorElement(String language, String name, String priority) {
     System.out.println("Language:" + language);
   }
@@ -1018,4 +989,3 @@ public class XmlSuite implements Cloneable {
     return result;
   }
 }
-
