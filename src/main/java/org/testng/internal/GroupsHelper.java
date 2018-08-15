@@ -1,8 +1,13 @@
 package org.testng.internal;
 
+import org.testng.ITestNGMethod;
 import org.testng.collections.Lists;
 import org.testng.collections.Maps;
+import org.testng.internal.annotations.IAnnotationFinder;
+import org.testng.xml.XmlSuite;
+import org.testng.xml.XmlTest;
 
+import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 
@@ -50,6 +55,22 @@ public final class GroupsHelper {
         }
 
         return result;
+    }
+
+    public static Graph<Map.Entry<String, List<String>>> topologicalSort(XmlTest xmlTest,
+        Comparator<Map.Entry<String, List<String>>> comparator) {
+
+        final Map<String, List<String>> allMetaGroups = Maps.newHashMap();
+        allMetaGroups.putAll(xmlTest.getMetaGroups());
+        XmlSuite suite = xmlTest.getSuite();
+
+        while(suite != null) {
+            allMetaGroups.putAll(suite.getMetaGroups());
+            suite = suite.getParentSuite();
+        }
+
+
+
     }
 
     private static void collectGroups(List<String> groups,

@@ -1,4 +1,4 @@
-package test.thread.parallelization.sample;
+package test.groups.sample;
 
 import org.testng.annotations.Parameters;
 import org.testng.annotations.Test;
@@ -16,10 +16,10 @@ import static test.TestNgRunStateTracker.EventInfo.SUITE_NAME;
 import static test.TestNgRunStateTracker.EventInfo.TEST_NAME;
 import static test.TestNgRunStateTracker.TestNgRunEvent.TEST_METHOD_EXECUTION;
 
-public class TestClassCSixMethodsWithNoDepsSample {
+public class TestClassAFiveMethodsWithIntraClassMetaGroup {
 
     @Parameters({ "suiteName", "testName", "sleepFor" })
-    @Test
+    @Test(groups = "TestClassAFiveMethodsWithIntraClassMetaGroupGroupA")
     public void testMethodA(String suiteName, String testName, String sleepFor) throws InterruptedException {
         long time = System.currentTimeMillis();
 
@@ -43,7 +43,7 @@ public class TestClassCSixMethodsWithNoDepsSample {
     }
 
     @Parameters({ "suiteName", "testName", "sleepFor" })
-    @Test
+    @Test(groups = "TestClassAFiveMethodsWithIntraClassMetaGroupGroupA")
     public void testMethodB(String suiteName, String testName, String sleepFor) throws InterruptedException {
         long time = System.currentTimeMillis();
 
@@ -67,7 +67,7 @@ public class TestClassCSixMethodsWithNoDepsSample {
     }
 
     @Parameters({ "suiteName", "testName", "sleepFor" })
-    @Test
+    @Test(groups = "TestClassAFiveMethodsWithIntraClassMetaGroupDefaultGroup")
     public void testMethodC(String suiteName, String testName, String sleepFor) throws InterruptedException {
         long time = System.currentTimeMillis();
 
@@ -91,7 +91,7 @@ public class TestClassCSixMethodsWithNoDepsSample {
     }
 
     @Parameters({ "suiteName", "testName", "sleepFor" })
-    @Test
+    @Test(groups = "TestClassAFiveMethodsWithIntraClassMetaGroupDefaultGroup")
     public void testMethodD(String suiteName, String testName, String sleepFor) throws InterruptedException {
         long time = System.currentTimeMillis();
 
@@ -115,7 +115,7 @@ public class TestClassCSixMethodsWithNoDepsSample {
     }
 
     @Parameters({ "suiteName", "testName", "sleepFor" })
-    @Test
+    @Test(groups = "TestClassAFiveMethodsWithIntraClassMetaGroupGroupB")
     public void testMethodE(String suiteName, String testName, String sleepFor) throws InterruptedException {
         long time = System.currentTimeMillis();
 
@@ -125,30 +125,6 @@ public class TestClassCSixMethodsWithNoDepsSample {
                         .setTimeOfEvent(time)
                         .setThread(Thread.currentThread())
                         .addData(METHOD_NAME, "testMethodE")
-                        .addData(CLASS_NAME, getClass().getCanonicalName())
-                        .addData(CLASS_INSTANCE, this)
-                        .addData(TEST_NAME, testName)
-                        .addData(SUITE_NAME, suiteName)
-                        .addData(GROUPS_DEPENDED_ON, new String[0])
-                        .addData(METHODS_DEPENDED_ON, new String[0])
-                        .addData(GROUPS_BELONGING_TO, new String[0])
-                        .build()
-        );
-
-        TimeUnit.MILLISECONDS.sleep(Integer.parseInt(sleepFor));
-    }
-
-    @Parameters({ "suiteName", "testName", "sleepFor" })
-    @Test
-    public void testMethodF(String suiteName, String testName, String sleepFor) throws InterruptedException {
-        long time = System.currentTimeMillis();
-
-        TestNgRunStateTracker.logEvent(
-                TestNgRunStateTracker.EventLog.builder()
-                        .setEvent(TEST_METHOD_EXECUTION)
-                        .setTimeOfEvent(time)
-                        .setThread(Thread.currentThread())
-                        .addData(METHOD_NAME, "testMethodF")
                         .addData(CLASS_NAME, getClass().getCanonicalName())
                         .addData(CLASS_INSTANCE, this)
                         .addData(TEST_NAME, testName)

@@ -8,29 +8,28 @@ import org.testng.annotations.Test;
 
 import org.testng.xml.XmlSuite;
 
-import test.thread.parallelization.TestNgRunStateTracker.EventLog;
+import test.TestNgRunStateListener;
+import test.TestNgRunStateTracker.EventLog;
 import test.thread.parallelization.sample.TestClassAFiveMethodsWithDataProviderOnAllMethodsAndNoDepsSample;
 
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 
 import static org.testng.Assert.assertEquals;
 
-import static test.thread.parallelization.TestNgRunStateTracker.getAllSuiteAndTestLevelEventLogs;
-import static test.thread.parallelization.TestNgRunStateTracker.getAllSuiteLevelEventLogs;
-import static test.thread.parallelization.TestNgRunStateTracker.getAllTestLevelEventLogs;
-import static test.thread.parallelization.TestNgRunStateTracker.getAllTestMethodLevelEventLogs;
-import static test.thread.parallelization.TestNgRunStateTracker.getSuiteListenerFinishEventLog;
-import static test.thread.parallelization.TestNgRunStateTracker.getSuiteListenerStartEventLog;
-import static test.thread.parallelization.TestNgRunStateTracker.getTestListenerFinishEventLog;
-import static test.thread.parallelization.TestNgRunStateTracker.getTestListenerStartEventLog;
-import static test.thread.parallelization.TestNgRunStateTracker.getTestListenerStartThreadId;
+import static test.TestNgRunStateTracker.getAllSuiteAndTestLevelEventLogs;
+import static test.TestNgRunStateTracker.getAllSuiteLevelEventLogs;
+import static test.TestNgRunStateTracker.getAllTestLevelEventLogs;
+import static test.TestNgRunStateTracker.getAllTestMethodLevelEventLogs;
+import static test.TestNgRunStateTracker.getSuiteListenerFinishEventLog;
+import static test.TestNgRunStateTracker.getSuiteListenerStartEventLog;
+import static test.TestNgRunStateTracker.getTestListenerFinishEventLog;
+import static test.TestNgRunStateTracker.getTestListenerStartEventLog;
+import static test.TestNgRunStateTracker.getTestListenerStartThreadId;
 
-import static test.thread.parallelization.TestNgRunStateTracker.getTestMethodLevelEventLogsForTest;
-import static test.thread.parallelization.TestNgRunStateTracker.reset;
+import static test.TestNgRunStateTracker.getTestMethodLevelEventLogsForTest;
+import static test.TestNgRunStateTracker.reset;
 
 /**
  * This class covers PTP_TC_3, Scenario 1 in the Parallelization Test Plan.

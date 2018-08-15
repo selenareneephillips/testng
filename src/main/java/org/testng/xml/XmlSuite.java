@@ -1,6 +1,7 @@
 package org.testng.xml;
 
 import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -1004,6 +1005,21 @@ public class XmlSuite implements Cloneable {
 
   public XmlGroups getGroups() {
     return m_xmlGroups;
+  }
+
+  /**
+   * @return Returns the metaGroups.
+   */
+  public Map<String, List<String>> getMetaGroups() {
+    if (m_xmlGroups == null) {
+      return Collections.emptyMap();
+    }
+    Map<String, List<String>> result = Maps.newHashMap();
+    List<XmlDefine> defines = m_xmlGroups.getDefines();
+    for (XmlDefine xd : defines) {
+      result.put(xd.getName(), xd.getIncludes());
+    }
+    return result;
   }
 
   public void addTest(XmlTest test) {

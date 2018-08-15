@@ -2,13 +2,19 @@ package test.thread.parallelization;
 
 import org.testng.ITestNGListener;
 import org.testng.TestNG;
-import org.testng.annotations.BeforeClass;
 import org.testng.annotations.Test;
+import org.testng.xml.XmlDefine;
+import org.testng.xml.XmlDependencies;
+import org.testng.xml.XmlGroups;
+import org.testng.xml.XmlRun;
 import org.testng.xml.XmlSuite;
 import org.testng.xml.XmlTest;
 
+import test.TestNgRunStateListener;
+import test.TestNgRunStateTracker;
 import test.thread.parallelization.sample.TestClassAFiveMethodsWithInterClassGroupDepsSample;
 import test.thread.parallelization.sample.TestClassAFiveMethodsWithIntraClassGroupDepsSample;
+import test.thread.parallelization.sample.TestClassAFiveMethodsWithIntraClassMetaGroupDepsSample;
 import test.thread.parallelization.sample.TestClassAFiveMethodsWithMethodOnMethodDependenciesSample;
 import test.thread.parallelization.sample.TestClassAFourMethodsWithIntraClassGroupDepsSample;
 import test.thread.parallelization.sample.TestClassASevenMethodsWithIntraClassGroupDepsSample;
@@ -28,22 +34,22 @@ import java.util.Map;
 
 import static org.testng.Assert.assertEquals;
 
-import static test.thread.parallelization.TestNgRunStateTracker.getAllEventLogsForSuite;
-import static test.thread.parallelization.TestNgRunStateTracker.getAllSuiteLevelEventLogs;
-import static test.thread.parallelization.TestNgRunStateTracker.getAllSuiteListenerStartEventLogs;
-import static test.thread.parallelization.TestNgRunStateTracker.getAllTestLevelEventLogs;
-import static test.thread.parallelization.TestNgRunStateTracker.getAllTestMethodLevelEventLogs;
-import static test.thread.parallelization.TestNgRunStateTracker.getSuiteAndTestLevelEventLogsForSuite;
-import static test.thread.parallelization.TestNgRunStateTracker.getSuiteLevelEventLogsForSuite;
-import static test.thread.parallelization.TestNgRunStateTracker.getSuiteListenerFinishEventLog;
-import static test.thread.parallelization.TestNgRunStateTracker.getSuiteListenerStartEventLog;
-import static test.thread.parallelization.TestNgRunStateTracker.getTestLevelEventLogsForSuite;
-import static test.thread.parallelization.TestNgRunStateTracker.getTestLevelEventLogsForTest;
-import static test.thread.parallelization.TestNgRunStateTracker.getTestListenerFinishEventLog;
-import static test.thread.parallelization.TestNgRunStateTracker.getTestListenerStartEventLog;
-import static test.thread.parallelization.TestNgRunStateTracker.getTestMethodLevelEventLogsForSuite;
-import static test.thread.parallelization.TestNgRunStateTracker.getTestMethodLevelEventLogsForTest;
-import static test.thread.parallelization.TestNgRunStateTracker.reset;
+import static test.TestNgRunStateTracker.getAllEventLogsForSuite;
+import static test.TestNgRunStateTracker.getAllSuiteLevelEventLogs;
+import static test.TestNgRunStateTracker.getAllSuiteListenerStartEventLogs;
+import static test.TestNgRunStateTracker.getAllTestLevelEventLogs;
+import static test.TestNgRunStateTracker.getAllTestMethodLevelEventLogs;
+import static test.TestNgRunStateTracker.getSuiteAndTestLevelEventLogsForSuite;
+import static test.TestNgRunStateTracker.getSuiteLevelEventLogsForSuite;
+import static test.TestNgRunStateTracker.getSuiteListenerFinishEventLog;
+import static test.TestNgRunStateTracker.getSuiteListenerStartEventLog;
+import static test.TestNgRunStateTracker.getTestLevelEventLogsForSuite;
+import static test.TestNgRunStateTracker.getTestLevelEventLogsForTest;
+import static test.TestNgRunStateTracker.getTestListenerFinishEventLog;
+import static test.TestNgRunStateTracker.getTestListenerStartEventLog;
+import static test.TestNgRunStateTracker.getTestMethodLevelEventLogsForSuite;
+import static test.TestNgRunStateTracker.getTestMethodLevelEventLogsForTest;
+import static test.TestNgRunStateTracker.reset;
 
 /** This class covers PTP_TC_9, Scenario 1 in the Parallelization Test Plan.
  *
@@ -71,12 +77,17 @@ import static test.thread.parallelization.TestNgRunStateTracker.reset;
 public class ParallelByMethodsTestCase9Scenario1 extends BaseParallelizationTest {
     private static final String SUITE_A = "TestSuiteA";
     private static final String SUITE_B = "TestSuiteB";
+    private static final String SUITE_C = "TestSuiteC";
 
     private static final String SUITE_A_TEST_A = "TestSuiteA-TestA";
     private static final String SUITE_A_TEST_B = "TestSuiteA-TestB";
 
     private static final String SUITE_B_TEST_A = "TestSuiteB-TestA";
     private static final String SUITE_B_TEST_B = "TestSuiteB-TestB";
+
+    private static final String SUITE_C_TEST_A = "TestSuiteC-ThreeTestClassTest";
+    private static final String SUITE_C_TEST_B = "TestSuiteC-TwoTestClassTest";
+    private static final String SUITE_C_TEST_C = "TestSuiteC-FourTestClassTest";
 
     private Map<String, List<TestNgRunStateTracker.EventLog>> suiteEventLogsMap = new HashMap<>();
     private Map<String, List<TestNgRunStateTracker.EventLog>> testEventLogsMap = new HashMap<>();
@@ -95,17 +106,29 @@ public class ParallelByMethodsTestCase9Scenario1 extends BaseParallelizationTest
     private List<TestNgRunStateTracker.EventLog> suiteTwoTestLevelEventLogs;
     private List<TestNgRunStateTracker.EventLog> suiteTwoTestMethodLevelEventLogs;
 
+    private List<TestNgRunStateTracker.EventLog> suiteThreeSuiteAndTestLevelEventLogs;
+    private List<TestNgRunStateTracker.EventLog> suiteThreeSuiteLevelEventLogs;
+    private List<TestNgRunStateTracker.EventLog> suiteThreeTestLevelEventLogs;
+    private List<TestNgRunStateTracker.EventLog> suiteThreeTestMethodLevelEventLogs;
+
     private List<TestNgRunStateTracker.EventLog> suiteOneTestOneTestMethodLevelEventLogs;
     private List<TestNgRunStateTracker.EventLog> suiteOneTestTwoTestMethodLevelEventLogs;
 
     private List<TestNgRunStateTracker.EventLog> suiteTwoTestOneTestMethodLevelEventLogs;
     private List<TestNgRunStateTracker.EventLog> suiteTwoTestTwoTestMethodLevelEventLogs;
 
+    private List<TestNgRunStateTracker.EventLog> suiteThreeTestOneTestMethodLevelEventLogs;
+    private List<TestNgRunStateTracker.EventLog> suiteThreeTestTwoTestMethodLevelEventLogs;
+    private List<TestNgRunStateTracker.EventLog> suiteThreeTestThreeTestMethodLevelEventLogs;
+
     private TestNgRunStateTracker.EventLog suiteOneSuiteListenerOnStartEventLog;
     private TestNgRunStateTracker.EventLog suiteOneSuiteListenerOnFinishEventLog;
 
     private TestNgRunStateTracker.EventLog suiteTwoSuiteListenerOnStartEventLog;
     private TestNgRunStateTracker.EventLog suiteTwoSuiteListenerOnFinishEventLog;
+
+    private TestNgRunStateTracker.EventLog suiteThreeSuiteListenerOnStartEventLog;
+    private TestNgRunStateTracker.EventLog suiteThreeSuiteListenerOnFinishEventLog;
 
     private TestNgRunStateTracker.EventLog suiteOneTestOneListenerOnStartEventLog;
     private TestNgRunStateTracker.EventLog suiteOneTestOneListenerOnFinishEventLog;
@@ -117,12 +140,20 @@ public class ParallelByMethodsTestCase9Scenario1 extends BaseParallelizationTest
     private TestNgRunStateTracker.EventLog suiteTwoTestTwoListenerOnStartEventLog;
     private TestNgRunStateTracker.EventLog suiteTwoTestTwoListenerOnFinishEventLog;
 
-    @BeforeClass
+    private TestNgRunStateTracker.EventLog suiteThreeTestOneListenerOnStartEventLog;
+    private TestNgRunStateTracker.EventLog suiteThreeTestOneListenerOnFinishEventLog;
+    private TestNgRunStateTracker.EventLog suiteThreeTestTwoListenerOnStartEventLog;
+    private TestNgRunStateTracker.EventLog suiteThreeTestTwoListenerOnFinishEventLog;
+    private TestNgRunStateTracker.EventLog suiteThreeTestThreeListenerOnStartEventLog;
+    private TestNgRunStateTracker.EventLog suiteThreeTestThreeListenerOnFinishEventLog;
+
+    @Test
     public void setUp() {
         reset();
 
         XmlSuite suiteOne = createXmlSuite(SUITE_A);
         XmlSuite suiteTwo = createXmlSuite(SUITE_B);
+        XmlSuite suiteThree = createXmlSuite(SUITE_C);
 
         createXmlTest(suiteOne, SUITE_A_TEST_A, TestClassBSixMethodsWithMethodOnMethodDependenciesSample.class,
                 TestClassAThreeMethodsWithMethodOnMethodDependenciesSample.class);
@@ -148,9 +179,59 @@ public class ParallelByMethodsTestCase9Scenario1 extends BaseParallelizationTest
                 TestClassAThreeMethodsWithIntraAndInterClassGroupDepsSample.class,
                 TestClassASixMethodsWithIntraClassGroupDepsSample.class);
 
-        suiteTwo.setParallel(XmlSuite.ParallelMode.METHODS);
+        //Need a class with in-class metagroup dependencies [within same test]
+        //Need a class with out-class metagroup dependencies [within same test]
+        //Need some dependencies on metgroup in another suite -- maybe have suite A depend on metagroups in this suite?]
+        //Need some metagroup dependencies between the tests in this suite have test C depend on metagroup in test A]
+        XmlTest suiteCTestA =createXmlTest(suiteThree, SUITE_C_TEST_A, //TestClassGThreeMethodsWithNoDepsSample.class,
+                //TestClassHFourMethodsWithNoDepsSample.class,
+                TestClassAFiveMethodsWithIntraClassMetaGroupDepsSample.class);
+//        XmlTest suiteCTestB =createXmlTest(suiteThree, SUITE_C_TEST_B, TestClassJFourMethodsWithNoDepsSample.class,
+//                TestClassKFiveMethodsWithNoDepsSample.class);
+//        XmlTest suiteCTestC = createXmlTest(suiteThree, SUITE_C_TEST_C, TestClassLThreeMethodsWithNoDepsSample.class,
+//                TestClassMFourMethodsWithNoDepsSample.class, TestClassNFiveMethodsWithNoDepsSample.class,
+//                TestClassOSixMethodsWithNoDepsSample.class);
 
+        XmlDefine metaGroup = createXmlDefine("TestClassAFiveMethodsWithIntraClassMetaGroupDepsMetaGroup",
+                "TestClassAFiveMethodsWithIntraClassMetaGroupDepsGroupA",
+                "TestClassAFiveMethodsWithIntraClassMetaGroupDepsGroupB");
+        XmlDefine allGroups = createXmlDefine("all", ".*Group.*");
+
+        XmlDependencies xmlDependencies = new XmlDependencies();
+        xmlDependencies.onGroup("TestClassAFiveMethodsWithIntraClassMetaGroupDepsDependsOnMetaGroup",
+                "TestClassAFiveMethodsWithIntraClassMetaGroupDepsMetaGroup");
+
+        XmlRun xmlRun = createXmlRun(allGroups);
+
+        XmlGroups xmlGroups = new XmlGroups();
+
+        xmlGroups.addDefine(metaGroup);
+        xmlGroups.addDefine(allGroups);
+
+        xmlGroups.setRun(xmlRun);
+        xmlGroups.setXmlDependencies(xmlDependencies);
+
+        suiteCTestA.setGroups(xmlGroups);
+//        suiteThree.setGroups(xmlGroups);
+
+        suiteTwo.setParallel(XmlSuite.ParallelMode.METHODS);
         suiteTwo.setThreadCount(7);
+
+        for(XmlTest test : suiteThree.getTests()) {
+            test.setParallel(XmlSuite.ParallelMode.METHODS);
+
+            switch(test.getName()) {
+                case SUITE_C_TEST_A:
+                    test.setThreadCount(10);
+                    break;
+//                case SUITE_C_TEST_B:
+//                    test.setThreadCount(5);
+//                    break;
+//                default:
+//                    test.setThreadCount(12);
+//                    break;
+            }
+        }
 
         addParams(suiteOne, SUITE_A, SUITE_A_TEST_A, "100");
         addParams(suiteOne, SUITE_A, SUITE_A_TEST_B, "100");
@@ -158,9 +239,15 @@ public class ParallelByMethodsTestCase9Scenario1 extends BaseParallelizationTest
         addParams(suiteTwo, SUITE_B, SUITE_B_TEST_A, "100");
         addParams(suiteTwo, SUITE_B, SUITE_B_TEST_B, "100");
 
-        TestNG tng = create(suiteOne, suiteTwo);
+        addParams(suiteThree, SUITE_C, SUITE_C_TEST_A, "100");
+        addParams(suiteThree, SUITE_C, SUITE_C_TEST_B, "100");
+        addParams(suiteThree, SUITE_C, SUITE_C_TEST_C, "100");
+
+        //TestNG tng = create(suiteOne, suiteTwo, suiteThree);
+        TestNG tng = create(suiteThree);
         tng.addListener((ITestNGListener) new TestNgRunStateListener());
 
+        System.out.println(suiteThree.toXml());
         tng.run();
 
         suiteLevelEventLogs = getAllSuiteLevelEventLogs();
@@ -175,11 +262,17 @@ public class ParallelByMethodsTestCase9Scenario1 extends BaseParallelizationTest
         suiteTwoSuiteLevelEventLogs = getSuiteLevelEventLogsForSuite(SUITE_B);
         suiteTwoTestLevelEventLogs = getTestLevelEventLogsForSuite(SUITE_B);
 
+        suiteThreeSuiteAndTestLevelEventLogs = getSuiteAndTestLevelEventLogsForSuite(SUITE_C);
+        suiteThreeSuiteLevelEventLogs = getSuiteLevelEventLogsForSuite(SUITE_C);
+        suiteThreeTestLevelEventLogs = getTestLevelEventLogsForSuite(SUITE_C);
+
         suiteEventLogsMap.put(SUITE_A, getAllEventLogsForSuite(SUITE_A));
         suiteEventLogsMap.put(SUITE_B, getAllEventLogsForSuite(SUITE_B));
+        suiteEventLogsMap.put(SUITE_C, getAllEventLogsForSuite(SUITE_C));
 
         suiteOneTestMethodLevelEventLogs = getTestMethodLevelEventLogsForSuite(SUITE_A);
         suiteTwoTestMethodLevelEventLogs = getTestMethodLevelEventLogsForSuite(SUITE_B);
+        suiteThreeTestMethodLevelEventLogs = getTestMethodLevelEventLogsForSuite(SUITE_C);
 
         suiteOneTestOneTestMethodLevelEventLogs = getTestMethodLevelEventLogsForTest(SUITE_A, SUITE_A_TEST_A);
         suiteOneTestTwoTestMethodLevelEventLogs = getTestMethodLevelEventLogsForTest(SUITE_A, SUITE_A_TEST_B);
@@ -187,17 +280,28 @@ public class ParallelByMethodsTestCase9Scenario1 extends BaseParallelizationTest
         suiteTwoTestOneTestMethodLevelEventLogs = getTestMethodLevelEventLogsForTest(SUITE_B, SUITE_B_TEST_A);
         suiteTwoTestTwoTestMethodLevelEventLogs = getTestMethodLevelEventLogsForTest(SUITE_B, SUITE_B_TEST_B);
 
+        suiteThreeTestOneTestMethodLevelEventLogs = getTestMethodLevelEventLogsForTest(SUITE_C, SUITE_C_TEST_A);
+        suiteThreeTestTwoTestMethodLevelEventLogs = getTestMethodLevelEventLogsForTest(SUITE_C, SUITE_C_TEST_B);
+        suiteThreeTestThreeTestMethodLevelEventLogs = getTestMethodLevelEventLogsForTest(SUITE_C, SUITE_C_TEST_C);
+
         testEventLogsMap.put(SUITE_A_TEST_A, getTestLevelEventLogsForTest(SUITE_A, SUITE_A_TEST_A));
         testEventLogsMap.put(SUITE_A_TEST_B, getTestLevelEventLogsForTest(SUITE_A, SUITE_A_TEST_B));
 
         testEventLogsMap.put(SUITE_B_TEST_A, getTestLevelEventLogsForTest(SUITE_B, SUITE_B_TEST_A));
         testEventLogsMap.put(SUITE_B_TEST_B, getTestLevelEventLogsForTest(SUITE_B, SUITE_B_TEST_B));
 
+        testEventLogsMap.put(SUITE_C_TEST_A, getTestLevelEventLogsForTest(SUITE_C, SUITE_C_TEST_A));
+        testEventLogsMap.put(SUITE_C_TEST_B, getTestLevelEventLogsForTest(SUITE_C, SUITE_C_TEST_B));
+        testEventLogsMap.put(SUITE_C_TEST_C, getTestLevelEventLogsForTest(SUITE_C, SUITE_C_TEST_C));
+
         suiteOneSuiteListenerOnStartEventLog = getSuiteListenerStartEventLog(SUITE_A);
         suiteOneSuiteListenerOnFinishEventLog = getSuiteListenerFinishEventLog(SUITE_A);
 
         suiteTwoSuiteListenerOnStartEventLog = getSuiteListenerStartEventLog(SUITE_B);
         suiteTwoSuiteListenerOnFinishEventLog = getSuiteListenerFinishEventLog(SUITE_B);
+
+        suiteTwoSuiteListenerOnStartEventLog = getSuiteListenerStartEventLog(SUITE_C);
+        suiteTwoSuiteListenerOnFinishEventLog = getSuiteListenerFinishEventLog(SUITE_C);
 
         suiteOneTestOneListenerOnStartEventLog = getTestListenerStartEventLog(SUITE_A, SUITE_A_TEST_A);
         suiteOneTestOneListenerOnFinishEventLog = getTestListenerFinishEventLog(SUITE_A, SUITE_A_TEST_A);
@@ -210,6 +314,13 @@ public class ParallelByMethodsTestCase9Scenario1 extends BaseParallelizationTest
 
         suiteTwoTestTwoListenerOnStartEventLog = getTestListenerStartEventLog(SUITE_B, SUITE_B_TEST_B);
         suiteTwoTestTwoListenerOnFinishEventLog = getTestListenerFinishEventLog(SUITE_B, SUITE_B_TEST_B);
+
+        suiteThreeTestOneListenerOnStartEventLog = getTestListenerStartEventLog(SUITE_C, SUITE_C_TEST_A);
+        suiteThreeTestOneListenerOnFinishEventLog = getTestListenerFinishEventLog(SUITE_C, SUITE_C_TEST_A);
+        suiteThreeTestTwoListenerOnStartEventLog = getTestListenerStartEventLog(SUITE_C, SUITE_C_TEST_B);
+        suiteThreeTestTwoListenerOnFinishEventLog = getTestListenerFinishEventLog(SUITE_C, SUITE_C_TEST_B);
+        suiteThreeTestThreeListenerOnStartEventLog = getTestListenerStartEventLog(SUITE_C, SUITE_C_TEST_C);
+        suiteThreeTestThreeListenerOnFinishEventLog = getTestListenerFinishEventLog(SUITE_C, SUITE_C_TEST_C);
     }
 
     @Test
@@ -461,9 +572,9 @@ public class ParallelByMethodsTestCase9Scenario1 extends BaseParallelizationTest
 
     @Test
     public void verifyThatTestMethodsRunInParallelThreads() {
-        verifyParallelMethodsWithDependencies(getTestMethodLevelEventLogsForTest(SUITE_A, SUITE_A_TEST_A), SUITE_A_TEST_A, 3);
-        verifyParallelMethodsWithDependencies(getTestMethodLevelEventLogsForTest(SUITE_A, SUITE_A_TEST_B), SUITE_A_TEST_B, 7);
-        verifyParallelMethodsWithDependencies(getTestMethodLevelEventLogsForTest(SUITE_B, SUITE_B_TEST_A), SUITE_B_TEST_A, 7);
-        verifyParallelMethodsWithDependencies(getTestMethodLevelEventLogsForTest(SUITE_B, SUITE_B_TEST_B), SUITE_B_TEST_B, 7);
+        verifySimultaneousTestMethods(getTestMethodLevelEventLogsForTest(SUITE_A, SUITE_A_TEST_A), SUITE_A_TEST_A, 3);
+        verifySimultaneousTestMethods(getTestMethodLevelEventLogsForTest(SUITE_A, SUITE_A_TEST_B), SUITE_A_TEST_B, 7);
+        verifySimultaneousTestMethods(getTestMethodLevelEventLogsForTest(SUITE_B, SUITE_B_TEST_A), SUITE_B_TEST_A, 7);
+        verifySimultaneousTestMethods(getTestMethodLevelEventLogsForTest(SUITE_B, SUITE_B_TEST_B), SUITE_B_TEST_B, 7);
     }
 }
