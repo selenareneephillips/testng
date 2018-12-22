@@ -1,8 +1,7 @@
 package test.priority;
 
 import java.util.stream.Collectors;
-import org.assertj.core.api.Assertions;
-import org.testng.Assert;
+import static org.assertj.core.api.Assertions.assertThat;
 import org.testng.TestNG;
 import org.testng.annotations.Test;
 import org.testng.xml.XmlSuite;
@@ -23,7 +22,12 @@ public class PriorityTest extends SimpleBaseTest {
       tng.setParallel(XmlSuite.ParallelMode.METHODS);
     }
     tng.run();
-    Assert.assertEquals(listener.getInvokedMethodNames().toArray(), methods);
+    if (parallel) {
+      //If tests are being executed in parallel, then order of methods is non-deterministic.
+      assertThat(listener.getInvokedMethodNames()).containsExactlyInAnyOrder(methods);
+    } else {
+      assertThat(listener.getInvokedMethodNames()).containsExactly(methods);
+    }
   }
 
   @Test(enabled = false, description = "Make sure priorities work in parallel mode")
@@ -51,6 +55,11 @@ public class PriorityTest extends SimpleBaseTest {
     runTest(WithPriorityAndDependsMethodsSample.class, false /* sequential */, "first", "second", "third");
   }
 
+  @Test(description = "Test suite with tests using dependency, priority, and parallel has wrong behavior")
+  public void priorityWithDependsOnMethodsParallel() {
+    runTest(WithPriorityAndDependsMethodsSample.class, true /* parallel */, "first", "third", "second");
+  }
+
   @Test(description = "GITHUB #1334: Order by priority gets messed up when there are failures and dependsOnMethods")
   public void priorityWithDependencyAndFailures() {
     TestNG tng = create(SampleTest01.class, SampleTest02.class);
@@ -66,7 +75,7 @@ public class PriorityTest extends SimpleBaseTest {
         .stream()
         .filter(each -> !allSkipped.contains(each))
         .collect(Collectors.toList());
-    Assertions.assertThat(actual).containsExactlyElementsOf(expected);
+    assertThat(actual).containsExactlyElementsOf(expected);
   }
 
 }

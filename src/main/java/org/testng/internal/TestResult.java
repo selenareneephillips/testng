@@ -11,6 +11,7 @@ import org.testng.ITestNGMethod;
 import org.testng.ITestResult;
 import org.testng.Reporter;
 import org.testng.TestNGException;
+import org.testng.TestRunner;
 import org.testng.collections.Lists;
 import org.testng.collections.Objects;
 
@@ -37,6 +38,7 @@ public class TestResult implements ITestResult {
   private ITestContext m_context;
   private int parameterIndex;
   private boolean m_wasRetried;
+  private final IAttributes m_attributes = new Attributes();
 
   private TestResult() {
     //defeat instantiation. We have factory methods.
@@ -53,7 +55,7 @@ public class TestResult implements ITestResult {
   public static TestResult newContextAwareTestResult(ITestNGMethod method, ITestContext ctx) {
     TestResult result = newEmptyTestResult();
     long time = System.currentTimeMillis();
-    result.init(method, null, time, 0L, ctx);
+    result.init(method, ctx, null, time, 0L);
     return result;
   }
 
@@ -61,7 +63,7 @@ public class TestResult implements ITestResult {
       Throwable t) {
     TestResult result = newEmptyTestResult();
     long time = System.currentTimeMillis();
-    result.init(method, t, time, time, ctx);
+    result.init(method, ctx, t, time, time);
     return result;
   }
 
@@ -69,17 +71,22 @@ public class TestResult implements ITestResult {
       Throwable t, long start) {
     TestResult result = newEmptyTestResult();
     long time = System.currentTimeMillis();
-    result.init(method, t, start, time, ctx);
+    result.init(method, ctx, t, start, time);
     return result;
   }
 
-  public void init(
-      ITestNGMethod method,
-      Throwable throwable,
-      long start,
-      long end,
-      ITestContext context) {
-    m_throwable = throwable;
+  public static TestResult newTestResultFrom(TestResult result, ITestNGMethod method,
+      ITestContext ctx, long start) {
+    TestResult testResult = newEmptyTestResult();
+    testResult.setHost(result.getHost());
+    testResult.setParameters(result.getParameters());
+    testResult.init(method, ctx, null, start, 0L);
+    TestResult.copyAttributes(result, testResult);
+    return testResult;
+  }
+
+  private void init(ITestNGMethod method, ITestContext ctx, Throwable t, long start, long end) {
+    m_throwable = t;
     m_instanceName = method.getTestClass().getName();
     if (null == m_throwable) {
       m_status = ITestResult.SUCCESS;
@@ -87,7 +94,7 @@ public class TestResult implements ITestResult {
     m_startMillis = start;
     m_endMillis = end;
     m_method = method;
-    m_context = context;
+    m_context = ctx;
 
     Object instance = method.getInstance();
 
@@ -95,27 +102,39 @@ public class TestResult implements ITestResult {
     // toString() if it's been overridden.
     if (instance == null) {
       m_name = m_method.getMethodName();
-    } else {
-      if (instance instanceof ITest) {
-        m_name = ((ITest) instance).getTestName();
-      } else if (method.getTestClass().getTestName() != null) {
-        m_name = method.getTestClass().getTestName();
-      } else {
-        String string = instance.toString();
-        // Only display toString() if it's been overridden by the user
-        m_name = getMethod().getMethodName();
-        try {
-          if (!Object.class
-              .getMethod("toString")
-              .equals(instance.getClass().getMethod("toString"))) {
-            m_instanceName =
-                string.startsWith("class ") ? string.substring("class ".length()) : string;
-            m_name = m_name + " on " + m_instanceName;
-          }
-        } catch (NoSuchMethodException ignore) {
-          // ignore
-        }
+      return;
+    }
+    if (instance instanceof ITest) {
+      m_name = ((ITest) instance).getTestName();
+      if (m_name != null) {
+        return;
       }
+      m_name = m_method.getMethodName();
+      if (TestRunner.getVerbose() > 1) {
+        String msg = String.format(
+            "Warning: [%s] implementation on class [%s] returned null. Defaulting to method name",
+            ITest.class.getName(), instance.getClass().getName());
+        System.err.println(msg);
+      }
+      return;
+    }
+    if (method.getTestClass().getTestName() != null) {
+      m_name = method.getTestClass().getTestName();
+      return;
+    }
+    String string = instance.toString();
+    // Only display toString() if it's been overridden by the user
+    m_name = getMethod().getMethodName();
+    try {
+      if (!Object.class
+          .getMethod("toString")
+          .equals(instance.getClass().getMethod("toString"))) {
+        m_instanceName =
+            string.startsWith("class ") ? string.substring("class ".length()) : string;
+        m_name = m_name + " on " + m_instanceName;
+      }
+    } catch (NoSuchMethodException ignore) {
+      // ignore
     }
   }
 
@@ -130,6 +149,9 @@ public class TestResult implements ITestResult {
    */
   @Override
   public String getTestName() {
+    if (this.m_method == null) {
+      return null;
+    }
     Object instance = this.m_method.getInstance();
     if (instance instanceof ITest) {
       return ((ITest) instance).getTestName();
@@ -272,10 +294,17 @@ public class TestResult implements ITestResult {
 
   @Override
   public Object getInstance() {
-    return this.m_method.getInstance();
+    return IParameterInfo.embeddedInstance(this.m_method.getInstance());
   }
 
-  private final IAttributes m_attributes = new Attributes();
+  @Override
+  public Object[] getFactoryParameters() {
+    IParameterInfo instance = this.m_method.getFactoryMethodParamsInfo();
+    if (instance != null) {
+      return instance.getParameters();
+    }
+    return new Object[0];
+  }
 
   @Override
   public Object getAttribute(String name) {
@@ -420,4 +449,12 @@ public class TestResult implements ITestResult {
     List<String> cfgMethodGroups = Arrays.asList(m.getGroups());
     return Arrays.stream(mygroups).anyMatch(cfgMethodGroups::contains);
   }
+
+  static void copyAttributes(ITestResult source, ITestResult target) {
+    source
+        .getAttributeNames()
+        .forEach(name -> target.setAttribute(name, source.getAttribute(name)));
+  }
+
+
 }
